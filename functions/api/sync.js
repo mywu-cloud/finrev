@@ -16,18 +16,6 @@ export async function onRequestPost({ request, env }) {
       }
     } catch (_) { /* 略過產業資料錯誤 */ }
 
-    // 取得上櫃股票產業對照表（容錯）
-    const tpexIndMap = {};
-    try {
-      const tpexCompRes = await fetch('https://www.tpex.org.tw/openapi/v1/tpex_company_basic_info');
-      const tpexCompData = await tpexCompRes.json();
-      for (const x of (Array.isArray(tpexCompData) ? tpexCompData : [])) {
-        const c = String(x['SecuritiesCompanyCode'] || x['Code'] || '').trim();
-        const i = String(x['Industry'] || x['IndustryCategory'] || x['產業類別'] || '').trim();
-        if (c && i) tpexIndMap[c] = i;
-      }
-    } catch (_) { /* 略過 TPEx 產業資料錯誤 */ }
-
     // 取得上市股票收盤資料
     const twseRes = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL');
     const twseStocks = await twseRes.json();
@@ -57,10 +45,11 @@ export async function onRequestPost({ request, env }) {
       const ch = parseFloat(s.Change) || null;
       const prevClose = cl != null && ch != null ? cl - ch : null;
       const pct = (prevClose && prevClose !== 0) ? Math.round(ch / prevClose * 10000) / 100 : null;
-      stocks.push({ id, name, market: 'TPEx', ind: tpexIndMap[id] || null, cl, ch, pct, now });
+      // 上櫃暫無產業對照，保留現有資料
+      stocks.push({ id, name, market: 'TPEx', ind: null, cl, ch, pct, now });
     }
 
-    // 批次寫入資料庫
+    // 批次寫入資料庫（使用 COALESCE 保留現有產業資料）
     for (let i = 0; i < stocks.length; i += 100) {
       const b = stocks.slice(i, i + 100);
       await env.DB.batch(b.map(s => env.DB.prepare(
