@@ -6,6 +6,7 @@ const COLS = [
   { key: 'rank', label: '排名', align: 'center' },
   { key: 'stock_id', label: '代碼', align: 'center' },
   { key: 'stock_name', label: '股票', align: 'left' },
+  { key: 'industry', label: '產業', align: 'left' },
   { key: 'close_price', label: '成交價', align: 'right' },
   { key: 'revenue', label: '營收(千)', align: 'right' },
   { key: 'revenue_mom', label: '月增率%', align: 'right' },
@@ -26,18 +27,46 @@ export default function RankingPanel() {
   const [error, setError] = useState('')
   const [sortKey, setSortKey] = useState('revenue_mom')
   const [sortDir, setSortDir] = useState('desc')
-  // 修正：市場值與資料庫一致，使用 TWSE/TPEx
   const [marketFilter, setMarketFilter] = useState('all')
+  const [industryFilter, setIndustryFilter] = useState('all')
+  const [industries, setIndustries] = useState([])
+
+  // Load industries list from API
+  useEffect(() => {
+    fetch('/api/industries')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) {
+          setIndustries(data.map(d => typeof d === 'string' ? d : (d.industry || d.name || '')).filter(Boolean).sort())
+        }
+      })
+      .catch(() => {
+        // Fallback: derive industries from stocks
+        if (stocks && stocks.length > 0) {
+          const set = new Set(stocks.map(s => s.industry).filter(Boolean))
+          setIndustries([...set].sort())
+        }
+      })
+  }, [])
+
+  // Also derive industries from stocks if industries list is empty
+  useEffect(() => {
+    if (industries.length === 0 && stocks && stocks.length > 0) {
+      const set = new Set(stocks.map(s => s.industry).filter(Boolean))
+      setIndustries([...set].sort())
+    }
+  }, [stocks, industries.length])
 
   const loadRanking = useCallback(async () => {
     if (!stocks || stocks.length === 0) return
     setLoading(true)
     setError('')
     const results = []
-    // 修正：過濾時使用 s.market（TWSE/TPEx），與 marketFilter 值一致
-    const target = stocks.filter(s =>
-      marketFilter === 'all' ? true : s.market === marketFilter
-    )
+    const target = stocks.filter(s => {
+      if (marketFilter !== 'all' && s.market !== marketFilter) return false
+      if (industryFilter !== 'all' && s.industry !== industryFilter) return false
+      return true
+    })
     for (let i = 0; i < target.length; i++) {
       const s = target[i]
       try {
@@ -49,10 +78,10 @@ export default function RankingPanel() {
           if (a.year !== b.year) return a.year > b.year ? a : b
           return a.month > b.month ? a : b
         }, data[0])
-        if (latest.revenue_mom == null) continue
         results.push({
           stock_id: s.stock_id,
           stock_name: s.stock_name,
+          industry: s.industry || '--',
           close_price: s.close_price,
           revenue: latest.revenue,
           revenue_mom: latest.revenue_mom,
@@ -66,18 +95,17 @@ export default function RankingPanel() {
     }
     setRows(results)
     setLoading(false)
-  }, [stocks, marketFilter])
+  }, [stocks, marketFilter, industryFilter])
 
   useEffect(() => {
     if (stocks && stocks.length > 0) {
       loadRanking()
     }
-  }, [stocks, marketFilter])
+  }, [stocks, marketFilter, industryFilter])
 
   const sorted = [...rows].sort((a, b) => {
     const av = a[sortKey]
     const bv = b[sortKey]
-    if (av == null && bv == null) return 0
     if (av == null) return 1
     if (bv == null) return -1
     const diff = parseFloat(av) - parseFloat(bv)
@@ -105,7 +133,6 @@ export default function RankingPanel() {
       <div className={styles.toolbar}>
         <h2 className={styles.heading}>台股營收月增率排行</h2>
         <div className={styles.filters}>
-          {/* 修正：select value 使用 TWSE/TPEx，與資料庫 market 欄位一致 */}
           <select
             className={styles.select}
             value={marketFilter}
@@ -115,13 +142,21 @@ export default function RankingPanel() {
             <option value="TWSE">上市 (TWSE)</option>
             <option value="TPEx">上櫃 (TPEx)</option>
           </select>
+          <select
+            className={styles.select}
+            value={industryFilter}
+            onChange={e => setIndustryFilter(e.target.value)}
+          >
+            <option value="all">所有產業</option>
+            {industries.map(ind => (
+              <option key={ind} value={ind}>{ind}</option>
+            ))}
+          </select>
           <button className={styles.refreshBtn} onClick={loadRanking} disabled={loading}>
             {loading ? '載入中...' : '🔄 重新載入'}
           </button>
         </div>
       </div>
-
-      {error && <div className={styles.error}>{error}</div>}
 
       {loading ? (
         <div className={styles.state}>載入中，請稍候...</div>
@@ -152,6 +187,7 @@ export default function RankingPanel() {
                   <td className={styles.td} style={{ textAlign: 'center' }}>{row.rank}</td>
                   <td className={styles.td} style={{ textAlign: 'center' }}>{row.stock_id}</td>
                   <td className={styles.td} style={{ textAlign: 'left' }}>{row.stock_name}</td>
+                  <td className={styles.td} style={{ textAlign: 'left' }}>{row.industry}</td>
                   <td className={styles.td} style={{ textAlign: 'right' }}>{fmt(row.close_price)}</td>
                   <td className={styles.td} style={{ textAlign: 'right' }}>{fmt(row.revenue, 0)}</td>
                   <td className={styles.td} style={{ textAlign: 'right', color: row.revenue_mom > 0 ? '#34d399' : row.revenue_mom < 0 ? '#f87171' : undefined }}>
