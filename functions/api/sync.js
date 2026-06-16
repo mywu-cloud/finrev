@@ -4,64 +4,66 @@ export async function onRequestPost({ request, env }) {
   const full = url.searchParams.get('full') === 'true';
   const TOKEN = env.FINMIND_TOKEN || '';
   try {
-    // 取得上市股票產業對照表（容錯）
-    const indMap = {};
-    try {
-      const twseIndRes = await fetch('https://openapi.twse.com.tw/v1/opendata/t187ap03_L', { redirect: 'follow' });
-      if (twseIndRes.ok) {
-        const twseIndData = await twseIndRes.json();
-        for (const x of (Array.isArray(twseIndData) ? twseIndData : [])) {
-          const c = String(x['公司代號'] || x['Code'] || '').trim();
-          const i = String(x['產業類別'] || x['Industry'] || x['IndustryCategory'] || '').trim();
-          if (c && i) indMap[c] = i;
-        }
-      }
-    } catch (_) { /* 略過產業資料錯誤 */ }
-
     const now = new Date().toISOString();
     const stocks = [];
 
-    // 取得上市股票收盤資料（容錯）
+    // 取得上市股票產業對照表
+    const indMap = {};
     try {
-      const twseRes = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL', { redirect: 'follow' });
-      if (twseRes.ok) {
-        const twseStocks = await twseRes.json();
-        for (const s of twseStocks) {
-          const id = String(s.Code||'').trim();
-          const name = String(s.Name||'').trim();
+      const r = await fetch('https://openapi.twse.com.tw/v1/opendata/t187ap03_L');
+      if (r.ok) {
+        const d = await r.json();
+        for (const x of (Array.isArray(d) ? d : [])) {
+          const c = String(x['公司代號'] || '').trim();
+          const i = String(x['產業類別'] || '').trim();
+          if (c && i) indMap[c] = i;
+        }
+      }
+    } catch (_) {}
+
+    // 取得上市股票收盤資料
+    try {
+      const r = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL');
+      if (r.ok) {
+        const d = await r.json();
+        for (const s of d) {
+          const id = String(s.Code || '').trim();
+          const name = String(s.Name || '').trim();
           if (!id || !name) continue;
           const cl = parseFloat(s.ClosingPrice) || null;
           const ch = parseFloat(s.Change) || null;
-          const prevClose = cl != null && ch != null ? cl - ch : null;
-          const pct = (prevClose && prevClose !== 0) ? Math.round(ch / prevClose * 10000) / 100 : null;
+          const prev = cl != null && ch != null ? cl - ch : null;
+          const pct = prev ? Math.round(ch / prev * 10000) / 100 : null;
           stocks.push({ id, name, market: 'TWSE', ind: indMap[id] || null, cl, ch, pct, now });
         }
       }
-    } catch (_) { /* 略過上市資料錯誤 */ }
+    } catch (_) {}
 
     // 取得上櫃股票收盤資料（容錯）
     try {
-      const tpexRes = await fetch('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes', { redirect: 'follow' });
-      if (tpexRes.ok) {
-        const tpexStocks = await tpexRes.json();
-        for (const s of tpexStocks) {
-          const id = String(s.SecuritiesCompanyCode||'').trim();
-          const name = String(s.CompanyName||'').trim();
-          if (!id || !name) continue;
-          const cl = parseFloat(s.Close) || null;
-          const ch = parseFloat(s.Change) || null;
-          const prevClose = cl != null && ch != null ? cl - ch : null;
-          const pct = (prevClose && prevClose !== 0) ? Math.round(ch / prevClose * 10000) / 100 : null;
-          stocks.push({ id, name, market: 'TPEx', ind: null, cl, ch, pct, now });
+      const r = await fetch('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes', { redirect: 'manual' });
+      if (r.ok || r.type === 'opaqueredirect') {
+        if (r.ok) {
+          const d = await r.json();
+          for (const s of (Array.isArray(d) ? d : [])) {
+            const id = String(s.SecuritiesCompanyCode || '').trim();
+            const name = String(s.CompanyName || '').trim();
+            if (!id || !name) continue;
+            const cl = parseFloat(s.Close) || null;
+            const ch = parseFloat(s.Change) || null;
+            const prev = cl != null && ch != null ? cl - ch : null;
+            const pct = prev ? Math.round(ch / prev * 10000) / 100 : null;
+            stocks.push({ id, name, market: 'TPEx', ind: null, cl, ch, pct, now });
+          }
         }
       }
-    } catch (_) { /* 略過上櫃資料錯誤 */ }
+    } catch (_) {}
 
     if (stocks.length === 0) {
-      return Response.json({ error: 'No stock data fetched from upstream APIs' }, { status: 502 });
+      return Response.json({ error: 'No stock data available' }, { status: 502 });
     }
 
-    // 批次寫入資料庫（使用 COALESCE 保留現有產業資料）
+    // 批次寫入資料庫
     for (let i = 0; i < stocks.length; i += 100) {
       const b = stocks.slice(i, i + 100);
       await env.DB.batch(b.map(s => env.DB.prepare(
@@ -71,33 +73,21 @@ export async function onRequestPost({ request, env }) {
 
     // 同步月營收資料（使用 FinMind API）
     if (TOKEN) {
-      const yr = full
-        ? 2010
-        : new Date().getFullYear() - 1;
+      const yr = full ? 2010 : new Date().getFullYear() - 1;
       const ids = full
         ? stocks.map(s => s.id)
         : ['2330','2317','2454','2382','2308','2303','3711','2412','1301','1303','2881','2882','2886','2891','5880'];
-
       for (const sid of ids) {
         try {
-          const fmRes = await fetch(`https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMonthRevenue&data_id=${sid}&start_date=${yr}-01-01&token=${TOKEN}`);
-          const d = await fmRes.json();
+          const r = await fetch(`https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMonthRevenue&data_id=${sid}&start_date=${yr}-01-01&token=${TOKEN}`);
+          const d = await r.json();
           if (!d.data || !Array.isArray(d.data)) continue;
           for (let i = 0; i < d.data.length; i += 50) {
             await env.DB.batch(d.data.slice(i, i + 50).map(x => env.DB.prepare(
               'INSERT INTO month_revenues(stock_id,year,month,revenue,revenue_mom,revenue_yoy,cumulative_revenue,cumulative_yoy) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(stock_id,year,month) DO UPDATE SET revenue=excluded.revenue,revenue_mom=excluded.revenue_mom,revenue_yoy=excluded.revenue_yoy,cumulative_revenue=excluded.cumulative_revenue,cumulative_yoy=excluded.cumulative_yoy'
-            ).bind(
-              sid,
-              parseInt(x.revenue_year),
-              parseInt(x.revenue_month),
-              parseInt(x.revenue),
-              parseFloat(x.revenue_month_compare_last_month_increase) || null,
-              parseFloat(x.revenue_month_compare_last_year_increase) || null,
-              parseInt(x.cumulative_revenue) || null,
-              parseFloat(x.cumulative_revenue_compare_last_year_increase) || null
-            ));
+            ).bind(sid, parseInt(x.revenue_year), parseInt(x.revenue_month), parseInt(x.revenue), parseFloat(x.revenue_month_compare_last_month_increase) || null, parseFloat(x.revenue_month_compare_last_year_increase) || null, parseInt(x.cumulative_revenue) || null, parseFloat(x.cumulative_revenue_compare_last_year_increase) || null));
           }
-        } catch(e) {}
+        } catch (_) {}
       }
     }
 
