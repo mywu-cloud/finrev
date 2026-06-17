@@ -219,7 +219,7 @@ async function loadTWSE() {
     for (var k=0; k<keys.length; k++) {
       var key = keys[k];
       var val = it[key];
-      if (key.indexOf('當月營收') >= 0 && key.indexOf('累計') < 0) { var _r=pf(val); rev=_r!=null?_r/1e5:null; }
+      if (key.indexOf('當月營收') >= 0 && key.indexOf('累計') < 0 && key.indexOf('去年') < 0) { var _r=pf(val); rev=_r!=null?_r/1e5:null; }
       else if (key.indexOf('上月比較') >= 0) mom = pf(val);
       else if (key.indexOf('去年同月') >= 0) yoy = pf(val);
       else if (key.indexOf('當月累計') >= 0) { var _c=pf(val); cum=_c!=null?_c/1e5:null; }
@@ -338,7 +338,7 @@ async function loadWatch() {
       var rev=null, mom=null, yoy=null, cum=null, cumy=null, ind='', nm='';
       for (var k=0; k<keys.length; k++) {
         var key=keys[k], val=it[key];
-        if (key.indexOf('當月營收')>=0 && key.indexOf('累計')<0) { var _wr=pf(val); rev=_wr!=null?_wr/1e5:null; }
+        if (key.indexOf('當月營收')>=0 && key.indexOf('累計')<0 && key.indexOf('去年')<0) { var _wr=pf(val); rev=_wr!=null?_wr/1e5:null; }
         else if (key.indexOf('上月比較')>=0) mom=pf(val);
         else if (key.indexOf('去年同月')>=0) yoy=pf(val);
         else if (key.indexOf('當月累計')>=0) { var _wc=pf(val); cum=_wc!=null?_wc/1e5:null; }
