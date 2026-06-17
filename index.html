@@ -143,7 +143,7 @@ function f2(v) {
 
 function fr(v) {
   if (v == null) return '--';
-  return (v/1e8).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return parseFloat(v).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
 function fp(v) {
@@ -219,10 +219,10 @@ async function loadTWSE() {
     for (var k=0; k<keys.length; k++) {
       var key = keys[k];
       var val = it[key];
-      if (key.indexOf('當月營收') >= 0 && key.indexOf('累計') < 0) rev = pf(val);
+      if (key.indexOf('當月營收') >= 0 && key.indexOf('累計') < 0) { var _r=pf(val); rev=_r!=null?_r/1e5:null; }
       else if (key.indexOf('上月比較') >= 0) mom = pf(val);
       else if (key.indexOf('去年同月') >= 0) yoy = pf(val);
-      else if (key.indexOf('當月累計') >= 0) cum = pf(val);
+      else if (key.indexOf('當月累計') >= 0) { var _c=pf(val); cum=_c!=null?_c/1e5:null; }
       else if (key.indexOf('前期比較') >= 0) cumy = pf(val);
       else if (key.indexOf('產業別') >= 0) ind = (val||'').trim();
       else if (key.indexOf('資料年月') >= 0) ym = (val||'').trim();
@@ -284,7 +284,7 @@ async function loadTPEx() {
         map[arr[m2].revenue_year+'_'+arr[m2].revenue_month] = arr[m2].revenue;
       }
       var last = arr[arr.length-1];
-      var y = last.revenue_year, mo = last.revenue_month, rev = last.revenue;
+      var y = last.revenue_year, mo = last.revenue_month, rev = last.revenue/1e8;
       var pmRev = mo>1 ? map[y+'_'+(mo-1)] : map[(y-1)+'_12'];
       var mom = pmRev!=null ? parseFloat(((rev-pmRev)/Math.abs(pmRev)*100).toFixed(2)) : null;
       var pyRev = map[(y-1)+'_'+mo];
@@ -294,7 +294,7 @@ async function loadTPEx() {
       var cumy = cpv ? parseFloat(((cum-cpv)/Math.abs(cpv)*100).toFixed(2)) : null;
       if (!dm) dm = y + '年' + mo + '月';
       rows.push({sid:rs.s.stock_id, name:rs.s.stock_name, ind:rs.s.industry_category||'',
-        close:null, chg:null, pct:null, rev:rev, mom:mom, yoy:yoy, cum:cum||null, cumy:cumy});
+        close:null, chg:null, pct:null, rev:rev, mom:mom, yoy:yoy, cum:cum?cum/1e8:null, cumy:cumy});
     }
 
     var done = i + batch.length;
@@ -338,10 +338,10 @@ async function loadWatch() {
       var rev=null, mom=null, yoy=null, cum=null, cumy=null, ind='', nm='';
       for (var k=0; k<keys.length; k++) {
         var key=keys[k], val=it[key];
-        if (key.indexOf('當月營收')>=0 && key.indexOf('累計')<0) rev=pf(val);
+        if (key.indexOf('當月營收')>=0 && key.indexOf('累計')<0) { var _wr=pf(val); rev=_wr!=null?_wr/1e5:null; }
         else if (key.indexOf('上月比較')>=0) mom=pf(val);
         else if (key.indexOf('去年同月')>=0) yoy=pf(val);
-        else if (key.indexOf('當月累計')>=0) cum=pf(val);
+        else if (key.indexOf('當月累計')>=0) { var _wc=pf(val); cum=_wc!=null?_wc/1e5:null; }
         else if (key.indexOf('前期比較')>=0) cumy=pf(val);
         else if (key.indexOf('產業別')>=0) ind=(val||'').trim();
         else if (key.indexOf('公司名稱')>=0) nm=(val||'').trim();
@@ -390,7 +390,7 @@ async function loadWatch() {
       var cl2=lp.close||null, ch2=null, pct2=null;
       if (pp.close && cl2!=null) { ch2=parseFloat((cl2-pp.close).toFixed(2)); pct2=parseFloat((ch2/pp.close*100).toFixed(2)); }
       return {sid:id, name:si?si.stock_name:id, ind:si?si.industry_category:'',
-        close:cl2, chg:ch2, pct:pct2, rev:rv2, mom:mom2, yoy:yoy2, cum:cm2||null, cumy:cumy2};
+        close:cl2, chg:ch2, pct:pct2, rev:rv2!=null?rv2/1e8:null, mom:mom2, yoy:yoy2, cum:cm2?cm2/1e8:null, cumy:cumy2};
     }).catch(function(){
       return {sid:id, name:si?si.stock_name:id, ind:'', close:null, chg:null, pct:null, rev:null, mom:null, yoy:null, cum:null, cumy:null};
     });
@@ -615,10 +615,10 @@ function getTblData() {
       r.close!=null ? parseFloat(r.close).toFixed(2) : '',
       r.chg!=null ? (r.chg>0?'+':'')+parseFloat(r.chg).toFixed(2) : '',
       r.pct!=null ? parseFloat(r.pct).toFixed(2)+'%' : '',
-      r.rev!=null ? (r.rev/1e8).toFixed(2) : '',
+      r.rev!=null ? parseFloat(r.rev).toFixed(2) : '',
       r.mom!=null ? parseFloat(r.mom).toFixed(2)+'%' : '',
       r.yoy!=null ? parseFloat(r.yoy).toFixed(2)+'%' : '',
-      r.cum!=null ? (r.cum/1e8).toFixed(2) : '',
+      r.cum!=null ? parseFloat(r.cum).toFixed(2) : '',
       r.cumy!=null ? parseFloat(r.cumy).toFixed(2)+'%' : ''
     ];
   });
