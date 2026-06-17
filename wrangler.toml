@@ -1,0 +1,3 @@
+# Cloudflare Pages config
+name = "finrev"
+pages_build_output_dir = "."
