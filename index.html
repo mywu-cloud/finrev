@@ -2,535 +2,665 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>台股月營收排行系統</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;background:#f5f6f8;color:#222;min-height:100vh}
-.hdr{background:#fff;border-bottom:1px solid #dde1e7;padding:10px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-.hdr h1{font-size:17px;font-weight:700;color:#1a1a2e;white-space:nowrap}
-.hdr-info{font-size:12px;color:#888;margin-left:auto;text-align:right;line-height:1.4}
+.hdr{background:#fff;border-bottom:1px solid #dde1e7;padding:10px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.hdr h1{font-size:17px;font-weight:700;color:#1a1a2e}
+.hdr-r{font-size:12px;color:#888;margin-left:auto}
 .tabs{display:flex;background:#fff;border-bottom:2px solid #dde1e7;padding:0 20px}
 .tab{padding:9px 18px;font-size:14px;font-family:inherit;background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;color:#555;font-weight:500;margin-bottom:-2px;transition:color .15s,border-color .15s}
 .tab:hover{color:#1a6fc4}
-.tab.active{color:#1a6fc4;border-bottom-color:#1a6fc4;font-weight:700}
-.toolbar{background:#fff;padding:8px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #eee}
-select,input[type=text]{font-family:inherit;font-size:14px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#222;height:30px}
+.tab.on{color:#1a6fc4;border-bottom-color:#1a6fc4;font-weight:700}
+.tb{background:#fff;padding:8px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-bottom:1px solid #eee}
+select,input{font-family:inherit;font-size:14px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#222;height:30px}
 select:focus,input:focus{outline:none;border-color:#1a6fc4}
 .sp{flex:1}
-.btn{font-family:inherit;font-size:13px;padding:4px 12px;border:none;border-radius:4px;cursor:pointer;height:30px;font-weight:500;transition:background .15s;white-space:nowrap}
-.btn-b{background:#1a6fc4;color:#fff}.btn-b:hover{background:#155aaa}
-.btn-g{background:#e8eaf0;color:#333}.btn-g:hover{background:#d0d4de}
-.btn-gr{background:#2a9d5c;color:#fff}.btn-gr:hover{background:#228048}
-.btn-r{background:#e05252;color:#fff}.btn-r:hover{background:#c43a3a}
-.btn-sm{padding:3px 9px;font-size:12px;height:24px}
-.watch-bar{background:#fff;padding:8px 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #eee}
-.watch-bar input{width:110px}
-.prog{height:3px;background:#e8eaf0;display:none}
-.prog-bar{height:3px;background:#1a6fc4;transition:width .3s;width:0%}
-.sta{padding:5px 20px;font-size:13px;color:#555;background:#fafbfc;border-bottom:1px solid #eee;min-height:26px}
-.sta.ld{color:#1a6fc4}.sta.er{color:#e05252}
-.tbl-wrap{overflow-x:auto;padding-bottom:24px}
+.bt{font-family:inherit;font-size:13px;padding:4px 12px;border:none;border-radius:4px;cursor:pointer;height:30px;font-weight:500}
+.b1{background:#1a6fc4;color:#fff}.b1:hover{background:#155aaa}
+.b2{background:#e8eaf0;color:#333}.b2:hover{background:#d0d4de}
+.b3{background:#2a9d5c;color:#fff}.b3:hover{background:#228048}
+.b4{background:#e05252;color:#fff}.b4:hover{background:#c43a3a}
+.b5{padding:3px 8px;font-size:12px;height:24px}
+.wt{background:#fff;padding:8px 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #eee}
+.wt input{width:110px}
+.pg{height:3px;background:#e8eaf0;display:none}
+.pgb{height:3px;background:#1a6fc4;transition:width .3s;width:0%}
+.st{padding:5px 20px;font-size:13px;color:#555;background:#fafbfc;border-bottom:1px solid #eee;min-height:26px}
+.st.ld{color:#1a6fc4}.st.er{color:#e05252}
+.tw{overflow-x:auto;padding-bottom:24px}
 table{width:100%;border-collapse:collapse;font-size:14px;background:#fff}
 thead tr{background:#f0f2f7}
 th{padding:8px 11px;text-align:right;white-space:nowrap;font-weight:600;color:#333;border-bottom:2px solid #dde1e7;cursor:pointer;user-select:none;background:#f0f2f7}
 th:hover{background:#e4e7f0}
 th.l{text-align:left}
-th.c{text-align:center}
 .si{margin-left:3px;font-size:10px;color:#aaa}
 th.sa .si,th.sd .si{color:#1a6fc4}
 td{padding:7px 11px;border-bottom:1px solid #eeeff3;text-align:right;vertical-align:middle;white-space:nowrap}
 td.l{text-align:left}
-td.c{text-align:center}
 tr:hover td{background:#f7f9fd}
 .sid{font-weight:600;color:#1a6fc4}
 .sn{font-weight:500}
-.ind{font-size:12px;color:#999;margin-top:1px}
-.up{color:#d9363e}.dn{color:#389d59}.neu{color:#888}
-.rk{color:#aaa;font-size:13px}
+.in{font-size:12px;color:#999;margin-top:1px}
+.up{color:#d9363e}.dn{color:#389d59}.nu{color:#888}
+.rn{color:#aaa;font-size:13px}
 tfoot td{background:#f0f2f7;font-weight:600;border-top:2px solid #dde1e7;font-size:13px}
-.empty{padding:40px;text-align:center;color:#aaa;font-size:15px}
-@media(max-width:700px){th,td{padding:6px 7px;font-size:13px}}
+.em{padding:40px;text-align:center;color:#aaa;font-size:15px}
 </style>
 </head>
 <body>
 <div class="hdr">
-  <h1>📊 台股月營收排行</h1>
-  <div class="hdr-info" id="hdrInfo">--</div>
+  <h1>&#128202; 台股月營收排行</h1>
+  <div class="hdr-r" id="hdrR">--</div>
 </div>
 <div class="tabs">
-  <button class="tab active" id="tb-twse" onclick="switchTab('twse')">上市 (TWSE)</button>
+  <button class="tab on" id="tb-twse" onclick="switchTab('twse')">上市 (TWSE)</button>
   <button class="tab" id="tb-tpex" onclick="switchTab('tpex')">上櫃 (TPEx)</button>
-  <button class="tab" id="tb-watch" onclick="switchTab('watch')">⭐ 自選股</button>
+  <button class="tab" id="tb-watch" onclick="switchTab('watch')">&#11088; 自選股</button>
 </div>
-<div class="toolbar" id="toolMain">
+<div class="tb" id="toolM">
   <label style="font-size:14px;color:#555;font-weight:500">產業：</label>
-  <select id="indSel" onchange="onInd()"><option value="">全部產業</option></select>
+  <select id="indS" onchange="onInd()"><option value="">全部產業</option></select>
   <span class="sp"></span>
-  <button class="btn btn-g" onclick="dlCSV()">⬇ CSV</button>
-  <button class="btn btn-g" onclick="dlXLS()">⬇ XLS</button>
-  <button class="btn btn-b" onclick="reload()">🔄 重新載入</button>
+  <button class="bt b2" onclick="dlCSV()">&#8595; CSV</button>
+  <button class="bt b2" onclick="dlXLS()">&#8595; XLS</button>
+  <button class="bt b1" onclick="reload()">&#128260; 重新載入</button>
 </div>
-<div class="watch-bar" id="toolWatch" style="display:none">
-  <input id="wInp" type="text" placeholder="股票代號（4碼）" maxlength="6"
-    onkeydown="if(event.key==='Enter')addWatch()">
-  <button class="btn btn-gr" onclick="addWatch()">＋ 新增</button>
+<div class="wt" id="toolW" style="display:none">
+  <input id="wI" type="text" placeholder="股票代號（4碼）" maxlength="6" onkeydown="if(event.key==='Enter')addW()">
+  <button class="bt b3" onclick="addW()">&#65291; 新增</button>
   <span class="sp"></span>
-  <button class="btn btn-g" onclick="dlCSV()">⬇ CSV</button>
-  <button class="btn btn-g" onclick="dlXLS()">⬇ XLS</button>
-  <button class="btn btn-r btn-sm" onclick="clearWatch()">全部清除</button>
+  <button class="bt b2" onclick="dlCSV()">&#8595; CSV</button>
+  <button class="bt b2" onclick="dlXLS()">&#8595; XLS</button>
+  <button class="bt b4 b5" onclick="clrW()">全部清除</button>
 </div>
-<div class="prog" id="prog"><div class="prog-bar" id="progBar"></div></div>
-<div class="sta" id="sta">初始化中...</div>
-<div class="tbl-wrap">
-  <table id="mainTbl">
-    <thead id="thead"></thead>
-    <tbody id="tbody"></tbody>
-    <tfoot id="tfoot"></tfoot>
+<div class="pg" id="pg"><div class="pgb" id="pgb"></div></div>
+<div class="st" id="st">初始化中...</div>
+<div class="tw">
+  <table>
+    <thead id="th"></thead>
+    <tbody id="tb"></tbody>
+    <tfoot id="tf"></tfoot>
   </table>
-</div><script>
-// ─── CONSTANTS ───────────────────────────────────────────────────────────────
-const PROXY = 'https://corsproxy.io/?url=';
-const TWSE_REV_URL  = 'https://openapi.twse.com.tw/v1/opendata/t187ap05_L';
-const TWSE_PRC_URL  = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
-const TPEX_INFO_URL = 'https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInfo';
-const FM_REV_BASE   = 'https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMonthRevenue&data_id=';
-const FM_PRC_BASE   = 'https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=';
-const px = url => PROXY + encodeURIComponent(url);
+</div>
+<script>
+var PX = 'https://corsproxy.io/?url=';
+var TREV = 'https://openapi.twse.com.tw/v1/opendata/t187ap05_L';
+var TPRC = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
+var FINFO = 'https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInfo';
+var FREV = 'https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMonthRevenue&data_id=';
+var FPRC = 'https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=';
 
-const COLS = [
-  {k:'rank',   lb:'#',          al:'c', sort:true},
-  {k:'sid',    lb:'代號',       al:'c', sort:true},
-  {k:'name',   lb:'名稱',       al:'l', sort:true},
-  {k:'close',  lb:'收盤價',     al:'r', sort:true},
-  {k:'chg',    lb:'漲跌',       al:'r', sort:true},
-  {k:'chgpct', lb:'漲跌幅',     al:'r', sort:true},
-  {k:'rev',    lb:'月營收(億)', al:'r', sort:true},
-  {k:'mom',    lb:'月增率',     al:'r', sort:true},
-  {k:'yoy',    lb:'年增率',     al:'r', sort:true},
-  {k:'cumrev', lb:'累計營收(億)',al:'r', sort:true},
-  {k:'cumyoy', lb:'累計年增率', al:'r', sort:true},
+var COLS = [
+  {k:'rank',   lb:'#',           al:'c'},
+  {k:'sid',    lb:'代號',        al:'c'},
+  {k:'name',   lb:'名稱',        al:'l'},
+  {k:'close',  lb:'收盤價',      al:'r'},
+  {k:'chg',    lb:'漲跌',        al:'r'},
+  {k:'pct',    lb:'漲跌幅',      al:'r'},
+  {k:'rev',    lb:'月營收(億)',   al:'r'},
+  {k:'mom',    lb:'月增率',       al:'r'},
+  {k:'yoy',    lb:'年增率',       al:'r'},
+  {k:'cum',    lb:'累計營收(億)', al:'r'},
+  {k:'cumy',   lb:'累計年增率',   al:'r'}
 ];
 
-const EXCL = ['ETF','存託憑證','特別股','受益憑證'];
-const okName = n => !EXCL.some(w=>n.includes(w));
-const is4d   = c => /^[1-9][0-9]{3}$/.test(c);
+var BAD = ['ETF','存託憑證','特別股','受益憑證'];
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
-const S = {
+var G = {
   tab: 'twse',
   rows: {twse:[], tpex:[], watch:[]},
-  sortK: 'rev', sortD: 'desc',
+  sk: 'rev', sd: 'desc',
   ind: '',
-  watch: JSON.parse(localStorage.getItem('_twrev_watch')||'[]'),
-  dataMonth: '',
+  wl: [],
+  dm: ''
 };
 
-// ─── UTILS ───────────────────────────────────────────────────────────────────
-const pf=v=>{if(v==null||v==='')return null;const n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?null:n};
-const f2=v=>v==null?'--':parseFloat(v).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2});
-const frev=v=>v==null?'--':(v/1e8).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2});
-const fpct=v=>{if(v==null)return'--';const n=parseFloat(v);return(n>0?'+':'')+n.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2})+'%'};
-const cc=v=>v==null?'neu':v>0?'up':'down';
-const ROC_YM=ym=>{if(!ym||ym.length<5)return'';const y=parseInt(ym.slice(0,3));const m=ym.slice(3,5);return(1911+y)+'年'+(parseInt(m))+'月'};
+function initG() {
+  try { G.wl = JSON.parse(localStorage.getItem('_tw_w') || '[]'); } catch(e) { G.wl = []; }
+}
 
-// ─── PROGRESS ────────────────────────────────────────────────────────────────
-const prog=(pct,msg,cls)=>{
-  document.getElementById('progBar').style.width=pct+'%';
-  document.getElementById('prog').style.display='block';
-  const s=document.getElementById('sta');s.textContent=msg;s.className='sta '+(cls||'ld');
-};
-const done=(msg)=>{
-  document.getElementById('prog').style.display='none';
-  document.getElementById('progBar').style.width='0%';
-  const s=document.getElementById('sta');s.textContent=msg;s.className='sta';
-};
+function px(u) { return PX + encodeURIComponent(u); }
 
-// ─── FETCH TWSE DATA (one-shot) ───────────────────────────────────────────────
-async function loadTWSE(){
-  prog(5,'取得上市公司月營收...');
-  const [revRes, prcRes] = await Promise.all([
-    fetch(px(TWSE_REV_URL)),
-    fetch(px(TWSE_PRC_URL)),
-  ]);
-  const revData = await revRes.json();   // t187ap05_L
-  const prcData = await prcRes.json();   // STOCK_DAY_ALL
+function ok4(c) { return /^[1-9][0-9]{3}$/.test(c); }
+function okN(n) {
+  for (var i=0;i<BAD.length;i++) { if (n.indexOf(BAD[i]) >= 0) return false; }
+  return true;
+}
 
-  prog(60,'解析上市公司資料...');
-  // Price map
-  const pMap = {};
-  for (const p of prcData) {
-    if (!is4d(p.Code)||!okName(p.Name||'')) continue;
-    const close = pf(p.ClosingPrice);
-    const change = pf(p.Change);
-    let chgpct = null;
-    if (close!=null&&change!=null&&change!==0) {
-      const prev = close - change;
-      if (prev!==0) chgpct = parseFloat((change/Math.abs(prev)*100).toFixed(2));
+function pf(v) {
+  if (v == null || v === '') return null;
+  var n = parseFloat(String(v).replace(/,/g,''));
+  return isNaN(n) ? null : n;
+}
+
+function f2(v) {
+  if (v == null) return '--';
+  return parseFloat(v).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function fr(v) {
+  if (v == null) return '--';
+  return (v/1e8).toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function fp(v) {
+  if (v == null) return '--';
+  var n = parseFloat(v);
+  return (n>0?'+':'') + n.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2}) + '%';
+}
+
+function cc(v) {
+  if (v == null) return 'nu';
+  return v>0 ? 'up' : v<0 ? 'dn' : 'nu';
+}
+
+function rocYM(ym) {
+  if (!ym || ym.length < 5) return '';
+  return (1911+parseInt(ym.slice(0,3))) + '年' + parseInt(ym.slice(3,5)) + '月';
+}
+
+function spg(pct, msg) {
+  document.getElementById('pgb').style.width = pct+'%';
+  document.getElementById('pg').style.display = 'block';
+  var s = document.getElementById('st');
+  s.textContent = msg; s.className = 'st ld';
+}
+
+function cpg(msg) {
+  document.getElementById('pg').style.display = 'none';
+  document.getElementById('pgb').style.width = '0%';
+  var s = document.getElementById('st');
+  s.textContent = msg; s.className = 'st';
+}
+
+function serr(msg) {
+  document.getElementById('pg').style.display = 'none';
+  var s = document.getElementById('st');
+  s.textContent = msg; s.className = 'st er';
+}
+
+// ── LOAD TWSE (two API calls, one pass) ──────────────────────────────────────
+async function loadTWSE() {
+  spg(5, '取得上市公司月營收...');
+  var r1 = fetch(px(TREV));
+  var r2 = fetch(px(TPRC));
+  var res1 = await r1, res2 = await r2;
+  var revArr = await res1.json();
+  var prcArr = await res2.json();
+  spg(60, '解析上市公司資料...');
+
+  // price map
+  var pm = {};
+  for (var i=0; i<prcArr.length; i++) {
+    var p = prcArr[i];
+    if (!ok4(p.Code) || !okN(p.Name||'')) continue;
+    var cl = pf(p.ClosingPrice);
+    var ch = pf(p.Change);
+    var cp = null;
+    if (cl!=null && ch!=null && ch!==0) {
+      var pv = cl-ch;
+      if (pv!==0) cp = parseFloat((ch/Math.abs(pv)*100).toFixed(2));
     }
-    pMap[p.Code] = {close, chg:change, chgpct};
+    pm[p.Code] = {close:cl, chg:ch, pct:cp};
   }
 
-  // Parse date
-  let dataMonth = '';
+  var dm = '', rows = [];
+  for (var j=0; j<revArr.length; j++) {
+    var it = revArr[j];
+    var code = (it[Object.keys(it)[2]] || '').trim();
+    var name = (it[Object.keys(it)[3]] || '').trim();
+    if (!ok4(code) || !okN(name)) continue;
 
-  // Build rows
-  const rows = [];
-  for (const item of revData) {
-    const code = (item['公司代號']||'').trim();
-    const name = (item['公司名稱']||'').trim();
-    if (!is4d(code)||!okName(name)) continue;
-    const rev    = pf(item['營業收入-當月營收']);
+    var rev = null, mom = null, yoy = null, cum = null, cumy = null, ind = '', ym = '';
+    var keys = Object.keys(it);
+    for (var k=0; k<keys.length; k++) {
+      var key = keys[k];
+      var val = it[key];
+      if (key.indexOf('當月營收') >= 0 && key.indexOf('累計') < 0) rev = pf(val);
+      else if (key.indexOf('上月比較') >= 0) mom = pf(val);
+      else if (key.indexOf('去年同月') >= 0) yoy = pf(val);
+      else if (key.indexOf('當月累計') >= 0) cum = pf(val);
+      else if (key.indexOf('前期比較') >= 0) cumy = pf(val);
+      else if (key.indexOf('產業別') >= 0) ind = (val||'').trim();
+      else if (key.indexOf('資料年月') >= 0) ym = (val||'').trim();
+    }
     if (rev == null) continue;
-    const mom    = pf(item['營業收入-上月比較增減(%)']);
-    const yoy    = pf(item['營業收入-去年同月增減(%)']);
-    const cumrev = pf(item['累計營業收入-當月累計營收']);
-    const cumyoy = pf(item['累計營業收入-前期比較增減(%)']);
-    const ind    = (item['產業別']||'').trim();
-    const ym     = (item['資料年月']||'').trim();
-    if (ym && !dataMonth) dataMonth = ROC_YM(ym);
-    const price  = pMap[code] || {};
-    rows.push({sid:code, name, ind, close:price.close, chg:price.chg, chgpct:price.chgpct, rev, mom, yoy, cumrev, cumyoy});
+    if (ym && !dm) dm = rocYM(ym);
+    var pr = pm[code] || {};
+    rows.push({sid:code, name:name, ind:ind, close:pr.close||null, chg:pr.chg||null, pct:pr.pct||null, rev:rev, mom:mom, yoy:yoy, cum:cum, cumy:cumy});
   }
-  if (dataMonth) S.dataMonth = dataMonth;
-  S.rows.twse = rows;
-  prog(100,'');
+
+  if (dm) G.dm = dm;
+  G.rows.twse = rows;
+  document.getElementById('hdrR').textContent = '資料月份：' + dm;
+  cpg('上市：共 ' + rows.length + ' 檔，資料月份：' + dm);
   populateInd('twse');
   renderTable(getRows());
-  done('上市：共 '+rows.length+' 檔，資料月份：'+dataMonth);
-  document.getElementById('hdrInfo').textContent='資料月份：'+dataMonth;
 }
-// ─── FETCH TPEX DATA (FinMind via proxy) ─────────────────────────────────────
-async function loadTPEx(){
-  prog(5,'取得上櫃股票清單（FinMind）...');
-  // Get TPEx stock info
-  const infoRes = await fetch(px(TPEX_INFO_URL));
-  const infoData = await infoRes.json();
-  const tpexStocks = (infoData.data||[]).filter(s=>is4d(s.stock_id)&&okName(s.stock_name||'')&&s.type==='tpex');
-  prog(10,'已取得 '+tpexStocks.length+' 支上櫃股票，載入月營收...');
 
-  // Get today's date and start date for 14 months of data (for MoM, YoY, cumulative)
-  const now = new Date();
-  const prevYear = now.getFullYear()-1;
-  const twoBack  = now.getFullYear()-2;
-  // For MoM + YoY: need prior year same month
-  // Current date: 2026-06, so latest data should be 2026/5
-  // We need 2025/5 for YoY, 2026/4 for MoM, and 2025/1-5 for cumulative comparison
-  // Start from 2025-01 to cover all cases
-  const startDate = prevYear + '-01-01';
-  const priceStart = now.getFullYear()+'-'+(String(now.getMonth()+1).padStart(2,'0'))+'-01';
+// ── LOAD TPEX (FinMind via proxy, batched) ────────────────────────────────────
+async function loadTPEx() {
+  spg(5, '取得上櫃股票清單...');
+  var infoRes = await fetch(px(FINFO));
+  var infoData = await infoRes.json();
+  var stocks = (infoData.data||[]).filter(function(s){
+    return ok4(s.stock_id) && okN(s.stock_name||'') && s.type === 'tpex';
+  });
+  spg(10, '取得 '+stocks.length+' 支上櫃股票，載入月營收...');
 
-  const BATCH = 30;
-  const rows = [];
-  let done2 = 0;
-  let dataMonth = '';
+  var now = new Date();
+  var startDate = (now.getFullYear()-1) + '-01-01';
+  var BATCH = 30;
+  var rows = [];
+  var dm = '';
 
-  for (let i = 0; i < tpexStocks.length; i += BATCH) {
-    const batch = tpexStocks.slice(i, i+BATCH);
-    const bRes = await Promise.all(batch.map(async s => {
-      const url = FM_REV_BASE + s.stock_id + '&start_date=' + startDate;
-      try {
-        const r = await fetch(px(url));
-        const d = await r.json();
-        return { s, revRows: d.status===200?(d.data||[]):[] };
-      } catch { return { s, revRows: [] }; }
-    }));
-    for (const {s, revRows} of bRes) {
-      if (!revRows.length) continue;
-      // Sort asc by year+month
-      const sorted = revRows.slice().sort((a,b)=>a.revenue_year!==b.revenue_year?a.revenue_year-b.revenue_year:a.revenue_month-b.revenue_month);
-      const map = {};
-      sorted.forEach(r=>{map[r.revenue_year+'_'+r.revenue_month]=r.revenue});
-      const last = sorted[sorted.length-1];
-      const y=last.revenue_year, m=last.revenue_month;
-      const rev = last.revenue;
-      const prevMrev = m>1?map[y+'_'+(m-1)]:map[(y-1)+'_12'];
-      const mom = prevMrev!=null?parseFloat(((rev-prevMrev)/Math.abs(prevMrev)*100).toFixed(2)):null;
-      const prevYrev = map[(y-1)+'_'+m];
-      const yoy = prevYrev!=null?parseFloat(((rev-prevYrev)/Math.abs(prevYrev)*100).toFixed(2)):null;
-      let cumrev=0; for(let mo=1;mo<=m;mo++){const v=map[y+'_'+mo];if(v)cumrev+=v}
-      let cumprev=0; for(let mo=1;mo<=m;mo++){const v=map[(y-1)+'_'+mo];if(v)cumprev+=v}
-      const cumyoy = cumprev?parseFloat(((cumrev-cumprev)/Math.abs(cumprev)*100).toFixed(2)):null;
-      if (!dataMonth) dataMonth = y+'年'+m+'月';
-      rows.push({sid:s.stock_id, name:s.stock_name, ind:s.industry_category||'', close:null, chg:null, chgpct:null, rev, mom, yoy, cumrev, cumyoy});
+  for (var i=0; i<stocks.length; i+=BATCH) {
+    var batch = stocks.slice(i, i+BATCH);
+    var promises = batch.map(function(s) {
+      var url = FREV + s.stock_id + '&start_date=' + startDate;
+      return fetch(px(url)).then(function(r){ return r.json(); }).then(function(d){
+        return {s: s, arr: d.status===200 ? (d.data||[]) : []};
+      }).catch(function(){ return {s: s, arr: []}; });
+    });
+    var batchR = await Promise.all(promises);
+
+    for (var b=0; b<batchR.length; b++) {
+      var rs = batchR[b];
+      if (!rs.arr.length) continue;
+      var arr = rs.arr.slice().sort(function(a,b2){
+        return a.revenue_year !== b2.revenue_year ? a.revenue_year-b2.revenue_year : a.revenue_month-b2.revenue_month;
+      });
+      var map = {};
+      for (var m2=0; m2<arr.length; m2++) {
+        map[arr[m2].revenue_year+'_'+arr[m2].revenue_month] = arr[m2].revenue;
+      }
+      var last = arr[arr.length-1];
+      var y = last.revenue_year, mo = last.revenue_month, rev = last.revenue;
+      var pmRev = mo>1 ? map[y+'_'+(mo-1)] : map[(y-1)+'_12'];
+      var mom = pmRev!=null ? parseFloat(((rev-pmRev)/Math.abs(pmRev)*100).toFixed(2)) : null;
+      var pyRev = map[(y-1)+'_'+mo];
+      var yoy = pyRev!=null ? parseFloat(((rev-pyRev)/Math.abs(pyRev)*100).toFixed(2)) : null;
+      var cum=0; for(var c=1;c<=mo;c++){var cv=map[y+'_'+c];if(cv)cum+=cv;}
+      var cpv=0; for(var c2=1;c2<=mo;c2++){var cpvv=map[(y-1)+'_'+c2];if(cpvv)cpv+=cpvv;}
+      var cumy = cpv ? parseFloat(((cum-cpv)/Math.abs(cpv)*100).toFixed(2)) : null;
+      if (!dm) dm = y + '年' + mo + '月';
+      rows.push({sid:rs.s.stock_id, name:rs.s.stock_name, ind:rs.s.industry_category||'',
+        close:null, chg:null, pct:null, rev:rev, mom:mom, yoy:yoy, cum:cum||null, cumy:cumy});
     }
-    done2 += batch.length;
-    const pct = 10 + Math.round(done2/tpexStocks.length*75);
-    prog(pct,'上櫃載入中 '+done2+'/'+tpexStocks.length+'，已有 '+rows.length+' 筆');
-    // Progressive render
-    if (rows.length && done2%150===0) {
-      S.rows.tpex=[...rows];
-      if(S.tab==='tpex'){populateInd('tpex');renderTable(getRows());}
+
+    var done = i + batch.length;
+    var pct = 10 + Math.round(done/stocks.length*82);
+    spg(pct, '上櫃載入中 '+done+'/'+stocks.length+'，已有 '+rows.length+' 筆');
+    if (rows.length && done % 150 === 0) {
+      G.rows.tpex = rows.slice();
+      if (G.tab === 'tpex') { populateInd('tpex'); renderTable(getRows()); }
     }
   }
 
-  if (dataMonth) S.dataMonth = dataMonth;
-  S.rows.tpex = rows;
+  if (dm) G.dm = dm;
+  G.rows.tpex = rows;
+  document.getElementById('hdrR').textContent = '資料月份：' + dm;
+  cpg('上櫃：共 ' + rows.length + ' 檔，資料月份：' + dm);
   populateInd('tpex');
   renderTable(getRows());
-  done('上櫃：共 '+rows.length+' 檔，資料月份：'+dataMonth);
-  document.getElementById('hdrInfo').textContent='資料月份：'+dataMonth;
 }
-// ─── WATCHLIST ────────────────────────────────────────────────────────────────
-async function loadWatch(){
-  const ids = S.watch;
+
+// ── WATCHLIST ────────────────────────────────────────────────────────────────
+async function loadWatch() {
+  var ids = G.wl;
   if (!ids.length) {
-    S.rows.watch = [];
+    G.rows.watch = [];
     renderTable([]);
-    done('自選股：尚未新增股票');
+    cpg('自選股：尚未新增股票');
     return;
   }
-  prog(5,'取得自選股資料...');
+  spg(5, '取得自選股資料...');
+  var now = new Date();
+  var startDate = (now.getFullYear()-1) + '-01-01';
 
-  const now = new Date();
-  const startDate = (now.getFullYear()-1)+'-01-01';
-  const priceStart = now.getFullYear()+'-'+(String(now.getMonth()+1).padStart(2,'0'))+'-01';
-
-  // Load both TWSE bulk data and TPEx info
-  const [twseRevRes, twsePrcRes, tpexInfoRes] = await Promise.all([
-    fetch(px(TWSE_REV_URL)).catch(()=>null),
-    fetch(px(TWSE_PRC_URL)).catch(()=>null),
-    fetch(px(TPEX_INFO_URL)).catch(()=>null),
-  ]);
-  prog(40,'解析股票資料...');
-  
-  let twseRevMap={}, twsePrcMap={};
-  if (twseRevRes) {
-    const d = await twseRevRes.json();
-    d.forEach(item=>{
-      const code=(item['公司代號']||'').trim();
-      if(is4d(code)) {
-        twseRevMap[code]={
-          rev:pf(item['營業收入-當月營收']),
-          mom:pf(item['營業收入-上月比較增減(%)']),
-          yoy:pf(item['營業收入-去年同月增減(%)']),
-          cumrev:pf(item['累計營業收入-當月累計營收']),
-          cumyoy:pf(item['累計營業收入-前期比較增減(%)']),
-          name:item['公司名稱'],ind:item['產業別'],
-        };
+  var twseRevMap = {}, twsePrcMap = {}, tpexInfo = {};
+  try {
+    var r1 = await fetch(px(TREV)), r2 = await fetch(px(TPRC)), r3 = await fetch(px(FINFO));
+    var d1 = await r1.json(), d2 = await r2.json(), d3 = await r3.json();
+    for (var i=0; i<d1.length; i++) {
+      var it = d1[i], keys = Object.keys(it);
+      var code = (it[keys[2]]||'').trim();
+      if (!ok4(code)) continue;
+      var rev=null, mom=null, yoy=null, cum=null, cumy=null, ind='', nm='';
+      for (var k=0; k<keys.length; k++) {
+        var key=keys[k], val=it[key];
+        if (key.indexOf('當月營收')>=0 && key.indexOf('累計')<0) rev=pf(val);
+        else if (key.indexOf('上月比較')>=0) mom=pf(val);
+        else if (key.indexOf('去年同月')>=0) yoy=pf(val);
+        else if (key.indexOf('當月累計')>=0) cum=pf(val);
+        else if (key.indexOf('前期比較')>=0) cumy=pf(val);
+        else if (key.indexOf('產業別')>=0) ind=(val||'').trim();
+        else if (key.indexOf('公司名稱')>=0) nm=(val||'').trim();
       }
-    });
-  }
-  if (twsePrcRes) {
-    const d = await twsePrcRes.json();
-    d.forEach(p=>{
-      if(!is4d(p.Code)) return;
-      const close=pf(p.ClosingPrice), change=pf(p.Change);
-      let chgpct=null;
-      if(close!=null&&change!=null&&change!==0){const prev=close-change;if(prev!==0)chgpct=parseFloat((change/Math.abs(prev)*100).toFixed(2));}
-      twsePrcMap[p.Code]={close,chg:change,chgpct};
-    });
-  }
-  const tpexInfo={};
-  if(tpexInfoRes){const d=await tpexInfoRes.json();(d.data||[]).forEach(s=>{if(is4d(s.stock_id))tpexInfo[s.stock_id]=s});}
-
-  prog(60,'取得自選股月營收...');
-  const rows = await Promise.all(ids.map(async id => {
-    // Try TWSE data first
-    if (twseRevMap[id]) {
-      const rv=twseRevMap[id], pr=twsePrcMap[id]||{};
-      return {sid:id,name:rv.name||id,ind:rv.ind||'',close:pr.close,chg:pr.chg,chgpct:pr.chgpct,rev:rv.rev,mom:rv.mom,yoy:rv.yoy,cumrev:rv.cumrev,cumyoy:rv.cumyoy};
+      twseRevMap[code] = {rev:rev, mom:mom, yoy:yoy, cum:cum, cumy:cumy, ind:ind, name:nm};
     }
-    // Try TPEx via FinMind
-    const info = tpexInfo[id];
-    try {
-      const revUrl = FM_REV_BASE+id+'&start_date='+startDate;
-      const prcUrl = FM_PRC_BASE+id+'&start_date='+priceStart;
-      const [revRes2, prcRes2] = await Promise.all([fetch(px(revUrl)), fetch(px(prcUrl))]);
-      const revD=await revRes2.json(), prcD=await prcRes2.json();
-      const revRows=(revD.data||[]).sort((a,b)=>a.revenue_year!==b.revenue_year?a.revenue_year-b.revenue_year:a.revenue_month-b.revenue_month);
-      if (!revRows.length) return {sid:id,name:info?.stock_name||id,ind:info?.industry_category||'',close:null,chg:null,chgpct:null,rev:null,mom:null,yoy:null,cumrev:null,cumyoy:null};
-      const map={};revRows.forEach(r=>{map[r.revenue_year+'_'+r.revenue_month]=r.revenue});
-      const last=revRows[revRows.length-1],y=last.revenue_year,m=last.revenue_month,rev=last.revenue;
-      const prevM=m>1?map[y+'_'+(m-1)]:map[(y-1)+'_12'];
-      const mom2=prevM!=null?parseFloat(((rev-prevM)/Math.abs(prevM)*100).toFixed(2)):null;
-      const prevY=map[(y-1)+'_'+m];
-      const yoy2=prevY!=null?parseFloat(((rev-prevY)/Math.abs(prevY)*100).toFixed(2)):null;
-      let cr=0;for(let mo=1;mo<=m;mo++){const v=map[y+'_'+mo];if(v)cr+=v}
-      let cp=0;for(let mo=1;mo<=m;mo++){const v=map[(y-1)+'_'+mo];if(v)cp+=v}
-      const cumyoy2=cp?parseFloat(((cr-cp)/Math.abs(cp)*100).toFixed(2)):null;
-      const prices=(prcD.data||[]);
-      const lastP=prices[prices.length-1]||{},prevP=prices[prices.length-2];
-      let close2=lastP.close||null,chg2=null,chgpct2=null;
-      if(prevP&&prevP.close&&close2!=null){chg2=parseFloat((close2-prevP.close).toFixed(2));chgpct2=parseFloat((chg2/prevP.close*100).toFixed(2));}
-      return {sid:id,name:info?.stock_name||id,ind:info?.industry_category||'',close:close2,chg:chg2,chgpct:chgpct2,rev,mom:mom2,yoy:yoy2,cumrev:cr||null,cumyoy:cumyoy2};
-    } catch { return {sid:id,name:info?.stock_name||id,ind:'',close:null,chg:null,chgpct:null,rev:null,mom:null,yoy:null,cumrev:null,cumyoy:null}; }
-  }));
-  S.rows.watch=rows;
+    for (var j=0; j<d2.length; j++) {
+      var p = d2[j];
+      if (!ok4(p.Code)) continue;
+      var cl=pf(p.ClosingPrice), ch=pf(p.Change), cp2=null;
+      if (cl!=null && ch!=null && ch!==0) { var pv=cl-ch; if(pv!==0) cp2=parseFloat((ch/Math.abs(pv)*100).toFixed(2)); }
+      twsePrcMap[p.Code] = {close:cl, chg:ch, pct:cp2};
+    }
+    (d3.data||[]).forEach(function(s){ if(ok4(s.stock_id)) tpexInfo[s.stock_id]=s; });
+  } catch(e) {}
+
+  spg(40, '取得自選股月營收...');
+  var pArr = ids.map(function(id) {
+    if (twseRevMap[id]) {
+      var rv = twseRevMap[id], pr2 = twsePrcMap[id]||{};
+      return Promise.resolve({sid:id, name:rv.name||id, ind:rv.ind||'',
+        close:pr2.close||null, chg:pr2.chg||null, pct:pr2.pct||null,
+        rev:rv.rev, mom:rv.mom, yoy:rv.yoy, cum:rv.cum, cumy:rv.cumy});
+    }
+    var si = tpexInfo[id];
+    var ru = FREV+id+'&start_date='+startDate;
+    var pu = FPRC+id+'&start_date='+(now.getFullYear()+'-'+(String(now.getMonth()+1).padStart(2,'0'))+'-01');
+    return Promise.all([fetch(px(ru)), fetch(px(pu))]).then(function(rs2){
+      return Promise.all([rs2[0].json(), rs2[1].json()]);
+    }).then(function(dd) {
+      var revArr2 = dd[0].data||[], prcArr2 = dd[1].data||[];
+      if (!revArr2.length) return {sid:id, name:si?si.stock_name:id, ind:si?si.industry_category:'',
+        close:null, chg:null, pct:null, rev:null, mom:null, yoy:null, cum:null, cumy:null};
+      revArr2.sort(function(a,b2){ return a.revenue_year!==b2.revenue_year?a.revenue_year-b2.revenue_year:a.revenue_month-b2.revenue_month; });
+      var mp2={};
+      revArr2.forEach(function(r3){ mp2[r3.revenue_year+'_'+r3.revenue_month]=r3.revenue; });
+      var lt=revArr2[revArr2.length-1], y2=lt.revenue_year, m3=lt.revenue_month, rv2=lt.revenue;
+      var pmr=m3>1?mp2[y2+'_'+(m3-1)]:mp2[(y2-1)+'_12'];
+      var mom2=pmr!=null?parseFloat(((rv2-pmr)/Math.abs(pmr)*100).toFixed(2)):null;
+      var pyr=mp2[(y2-1)+'_'+m3];
+      var yoy2=pyr!=null?parseFloat(((rv2-pyr)/Math.abs(pyr)*100).toFixed(2)):null;
+      var cm2=0; for(var ci=1;ci<=m3;ci++){var cv2=mp2[y2+'_'+ci];if(cv2)cm2+=cv2;}
+      var cp3=0; for(var ci2=1;ci2<=m3;ci2++){var cv3=mp2[(y2-1)+'_'+ci2];if(cv3)cp3+=cv3;}
+      var cumy2=cp3?parseFloat(((cm2-cp3)/Math.abs(cp3)*100).toFixed(2)):null;
+      var lp=prcArr2[prcArr2.length-1]||{}, pp=prcArr2[prcArr2.length-2]||{};
+      var cl2=lp.close||null, ch2=null, pct2=null;
+      if (pp.close && cl2!=null) { ch2=parseFloat((cl2-pp.close).toFixed(2)); pct2=parseFloat((ch2/pp.close*100).toFixed(2)); }
+      return {sid:id, name:si?si.stock_name:id, ind:si?si.industry_category:'',
+        close:cl2, chg:ch2, pct:pct2, rev:rv2, mom:mom2, yoy:yoy2, cum:cm2||null, cumy:cumy2};
+    }).catch(function(){
+      return {sid:id, name:si?si.stock_name:id, ind:'', close:null, chg:null, pct:null, rev:null, mom:null, yoy:null, cum:null, cumy:null};
+    });
+  });
+
+  var rows = await Promise.all(pArr);
+  G.rows.watch = rows;
   renderTable(getRows());
-  done('自選股：'+rows.length+' 支，資料月份：'+S.dataMonth);
+  cpg('自選股：' + rows.length + ' 支，資料月份：' + G.dm);
 }
 
-const saveWatch=()=>localStorage.setItem('_twrev_watch',JSON.stringify(S.watch));
-function addWatch(){
-  const inp=document.getElementById('wInp');
-  const code=inp.value.trim().toUpperCase();inp.value='';
-  if(!code)return;
-  if(!is4d(code)){alert('請輸入4碼數字股票代號');return}
-  if(S.watch.includes(code)){alert(code+' 已在自選股');return}
-  S.watch.push(code);saveWatch();
-  if(S.tab==='watch')loadWatch();
+function saveW() { localStorage.setItem('_tw_w', JSON.stringify(G.wl)); }
+function addW() {
+  var inp = document.getElementById('wI');
+  var code = inp.value.trim().toUpperCase(); inp.value = '';
+  if (!code) return;
+  if (!ok4(code)) { alert('請輸入4碼數字股票代號'); return; }
+  if (G.wl.indexOf(code) >= 0) { alert(code + ' 已在自選股'); return; }
+  G.wl.push(code); saveW();
+  if (G.tab === 'watch') loadWatch();
 }
-function removeWatch(code){S.watch=S.watch.filter(id=>id!==code);saveWatch();if(S.tab==='watch')loadWatch()}
-function clearWatch(){if(!confirm('確定清除全部自選股？'))return;S.watch=[];saveWatch();S.rows.watch=[];renderTable([]);done('自選股已清空')}
-// ─── RENDER ───────────────────────────────────────────────────────────────────
-function getRows(){
-  let rows=[...(S.rows[S.tab]||[])];
-  if(S.tab!=='watch'&&S.ind) rows=rows.filter(r=>r.ind===S.ind);
-  rows.sort((a,b)=>{
-    const d=S.sortD==='asc'?1:-1;
-    if(S.sortK==='name'){return d*(a.name||'').localeCompare(b.name||'','zh-TW')}
-    if(S.sortK==='sid'){return d*(a.sid||'').localeCompare(b.sid||'')}
-    const av=a[S.sortK],bv=b[S.sortK];
-    if(av==null)return 1;if(bv==null)return-1;
-    return d*(parseFloat(av)-parseFloat(bv));
+function rmW(code) {
+  G.wl = G.wl.filter(function(id){ return id !== code; }); saveW();
+  if (G.tab === 'watch') loadWatch();
+}
+function clrW() {
+  if (!confirm('確定清除全部自選股？')) return;
+  G.wl = []; saveW(); G.rows.watch = []; renderTable([]); cpg('自選股已清空');
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function getRows() {
+  var rows = (G.rows[G.tab]||[]).slice();
+  if (G.tab !== 'watch' && G.ind) {
+    rows = rows.filter(function(r){ return r.ind === G.ind; });
+  }
+  var sk = G.sk, sd = G.sd;
+  rows.sort(function(a, b) {
+    var d = sd === 'asc' ? 1 : -1;
+    if (sk === 'name') return d * (a.name||'').localeCompare(b.name||'','zh-TW');
+    if (sk === 'sid')  return d * (a.sid||'').localeCompare(b.sid||'');
+    var av = a[sk], bv = b[sk];
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return d * (parseFloat(av) - parseFloat(bv));
   });
   return rows;
 }
 
-function populateInd(tab){
-  const sel=document.getElementById('indSel');
-  const inds=[...new Set((S.rows[tab]||[]).map(r=>r.ind).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-TW'));
-  sel.innerHTML='<option value="">全部產業</option>';
-  inds.forEach(ind=>{const o=document.createElement('option');o.value=ind;o.textContent=ind;if(ind===S.ind)o.selected=true;sel.appendChild(o)});
+function populateInd(tab) {
+  var sel = document.getElementById('indS');
+  var rows = G.rows[tab] || [];
+  var seen = {}, inds = [];
+  for (var i=0; i<rows.length; i++) {
+    var ind = rows[i].ind;
+    if (ind && !seen[ind]) { seen[ind]=1; inds.push(ind); }
+  }
+  inds.sort(function(a,b){ return a.localeCompare(b,'zh-TW'); });
+  sel.innerHTML = '<option value="">全部產業</option>';
+  for (var j=0; j<inds.length; j++) {
+    var o = document.createElement('option');
+    o.value = inds[j]; o.textContent = inds[j];
+    if (inds[j] === G.ind) o.selected = true;
+    sel.appendChild(o);
+  }
 }
 
-function renderHead(){
-  const tr=document.createElement('tr');
-  COLS.forEach(col=>{
-    const th=document.createElement('th');
-    th.className=col.al;
-    if(col.sort){th.style.cursor='pointer';th.onclick=()=>doSort(col.k);}
-    if(S.sortK===col.k)th.classList.add(S.sortD==='asc'?'sa':'sd');
-    const ico=col.sort?(S.sortK===col.k?(S.sortD==='asc'?'▲':'▼'):'⇅'):'';
-    th.innerHTML=col.lb+'<span class="si">'+ico+'</span>';
+function renderHead() {
+  var tr = document.createElement('tr');
+  for (var i=0; i<COLS.length; i++) {
+    var col = COLS[i];
+    var th = document.createElement('th');
+    th.className = col.al === 'l' ? 'l' : '';
+    th.style.cursor = 'pointer';
+    th.setAttribute('data-k', col.k);
+    th.onclick = (function(k){ return function(){ doSort(k); }; })(col.k);
+    if (G.sk === col.k) th.className += (th.className?' ':'') + (G.sd==='asc'?'sa':'sd');
+    var ico = G.sk===col.k ? (G.sd==='asc'?'&#9650;':'&#9660;') : '&#8661;';
+    th.innerHTML = col.lb + '<span class="si">' + ico + '</span>';
     tr.appendChild(th);
-  });
-  const th=document.getElementById('thead');th.innerHTML='';th.appendChild(tr);
+  }
+  var thead = document.getElementById('th');
+  thead.innerHTML = ''; thead.appendChild(tr);
 }
 
-function renderBody(rows){
-  const tb=document.getElementById('tbody');
-  if(!rows.length){tb.innerHTML='<tr><td colspan="'+COLS.length+'" class="empty">無資料</td></tr>';return}
-  const f=document.createDocumentFragment();
-  rows.forEach((row,idx)=>{
-    const tr=document.createElement('tr');
-    COLS.forEach(col=>{
-      const td=document.createElement('td');td.className=col.al;
-      switch(col.k){
-        case'rank':td.innerHTML='<span class="rk">'+(idx+1)+'</span>';break;
-        case'sid':td.innerHTML='<span class="sid">'+row.sid+'</span>';break;
-        case'name':td.className='l';td.innerHTML='<div class="sn">'+(row.name||'--')+'</div>'+(row.ind?'<div class="ind">'+row.ind+'</div>':'');break;
-        case'close':td.textContent=f2(row.close);break;
-        case'chg':td.className='r '+cc(row.chg);td.textContent=row.chg!=null?(row.chg>0?'+':'')+f2(row.chg):'--';break;
-        case'chgpct':td.className='r '+cc(row.chgpct);td.textContent=fpct(row.chgpct);break;
-        case'rev':td.textContent=frev(row.rev);break;
-        case'mom':td.className='r '+cc(row.mom);td.textContent=fpct(row.mom);break;
-        case'yoy':td.className='r '+cc(row.yoy);td.textContent=fpct(row.yoy);break;
-        case'cumrev':td.textContent=frev(row.cumrev);break;
-        case'cumyoy':td.className='r '+cc(row.cumyoy);td.textContent=fpct(row.cumyoy);break;
-      }
-      if(S.tab==='watch'&&col.k==='cumyoy'){
-        const orig=td.textContent;
-        const btn=document.createElement('button');
-        btn.className='btn btn-r btn-sm';btn.style.marginLeft='6px';btn.textContent='✕';
-        btn.onclick=e=>{e.stopPropagation();removeWatch(row.sid)};
-        td.textContent='';
-        const sp=document.createElement('span');sp.textContent=orig;
-        td.appendChild(sp);td.appendChild(btn);
+function renderBody(rows) {
+  var tbody = document.getElementById('tb');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="'+COLS.length+'" class="em">無資料</td></tr>';
+    return;
+  }
+  var frag = document.createDocumentFragment();
+  for (var i=0; i<rows.length; i++) {
+    var row = rows[i], tr = document.createElement('tr');
+    for (var j=0; j<COLS.length; j++) {
+      var col = COLS[j], td = document.createElement('td');
+      td.className = col.al === 'l' ? 'l' : '';
+      var k = col.k;
+      if (k==='rank') {
+        td.innerHTML = '<span class="rn">'+(i+1)+'</span>';
+      } else if (k==='sid') {
+        td.innerHTML = '<span class="sid">'+row.sid+'</span>';
+      } else if (k==='name') {
+        td.className = 'l';
+        td.innerHTML = '<div class="sn">'+(row.name||'--')+'</div>'+(row.ind?'<div class="in">'+row.ind+'</div>':'');
+      } else if (k==='close') {
+        td.textContent = f2(row.close);
+      } else if (k==='chg') {
+        td.className = cc(row.chg);
+        td.textContent = row.chg!=null ? (row.chg>0?'+':'')+f2(row.chg) : '--';
+      } else if (k==='pct') {
+        td.className = cc(row.pct);
+        td.textContent = fp(row.pct);
+      } else if (k==='rev') {
+        td.textContent = fr(row.rev);
+      } else if (k==='mom') {
+        td.className = cc(row.mom);
+        td.textContent = fp(row.mom);
+      } else if (k==='yoy') {
+        td.className = cc(row.yoy);
+        td.textContent = fp(row.yoy);
+      } else if (k==='cum') {
+        td.textContent = fr(row.cum);
+      } else if (k==='cumy') {
+        td.className = cc(row.cumy);
+        var v = fp(row.cumy);
+        if (G.tab === 'watch') {
+          var btn = document.createElement('button');
+          btn.className = 'bt b4 b5'; btn.style.marginLeft='6px'; btn.textContent='&#10005;';
+          (function(id){ btn.onclick = function(e){ e.stopPropagation(); rmW(id); }; })(row.sid);
+          var sp2 = document.createElement('span'); sp2.textContent = v;
+          td.appendChild(sp2); td.appendChild(btn);
+        } else {
+          td.textContent = v;
+        }
       }
       tr.appendChild(td);
-    });
-    f.appendChild(tr);
-  });
-  tb.innerHTML='';tb.appendChild(f);
+    }
+    frag.appendChild(tr);
+  }
+  tbody.innerHTML = ''; tbody.appendChild(frag);
 }
 
-function renderFoot(rows){
-  const tf=document.getElementById('tfoot');
-  if(!rows.length){tf.innerHTML='';return}
-  const totRev=rows.reduce((s,r)=>r.rev?(s+r.rev):s,0);
-  const yoys=rows.filter(r=>r.yoy!=null).map(r=>r.yoy);
-  const avgYoy=yoys.length?yoys.reduce((a,b)=>a+b,0)/yoys.length:null;
-  const up=rows.filter(r=>r.yoy!=null&&r.yoy>0).length;
-  const dn=rows.filter(r=>r.yoy!=null&&r.yoy<0).length;
-  const tr=document.createElement('tr');
-  COLS.forEach((col,i)=>{
-    const td=document.createElement('td');td.className=col.al;
-    if(i===1)td.textContent='合計/平均';
-    else if(col.k==='rev')td.textContent=frev(totRev);
-    else if(col.k==='yoy'){td.textContent=avgYoy!=null?fpct(avgYoy)+' 均':'-';td.className='r '+cc(avgYoy)}
-    else if(col.k==='mom')td.textContent='▲'+up+' ▼'+dn;
+function renderFoot(rows) {
+  var tfoot = document.getElementById('tf');
+  if (!rows.length) { tfoot.innerHTML=''; return; }
+  var totRev=0, yoys=[], up=0, dn=0;
+  for (var i=0; i<rows.length; i++) {
+    if (rows[i].rev) totRev += rows[i].rev;
+    if (rows[i].yoy != null) {
+      yoys.push(rows[i].yoy);
+      if (rows[i].yoy > 0) up++;
+      else if (rows[i].yoy < 0) dn++;
+    }
+  }
+  var avgYoy = yoys.length ? yoys.reduce(function(a,b){return a+b;},0)/yoys.length : null;
+  var tr = document.createElement('tr');
+  for (var j=0; j<COLS.length; j++) {
+    var col=COLS[j], td=document.createElement('td');
+    td.className = col.al==='l' ? 'l' : '';
+    if (j===1) td.textContent='合計/平均';
+    else if (col.k==='rev') td.textContent=fr(totRev);
+    else if (col.k==='yoy') { td.textContent=avgYoy!=null?fp(avgYoy)+' 均':'-'; td.className=cc(avgYoy); }
+    else if (col.k==='mom') td.textContent='&#9650;'+up+' &#9660;'+dn;
     else td.textContent='';
     tr.appendChild(td);
-  });
-  tf.innerHTML='';tf.appendChild(tr);
+  }
+  tfoot.innerHTML=''; tfoot.appendChild(tr);
 }
 
-function renderTable(rows){renderHead();renderBody(rows);renderFoot(rows)}
-function doSort(k){if(S.sortK===k)S.sortD=S.sortD==='asc'?'desc':'asc';else{S.sortK=k;S.sortD='desc'}renderTable(getRows())}
-function onInd(){S.ind=document.getElementById('indSel').value;renderTable(getRows())}
+function renderTable(rows) { renderHead(); renderBody(rows); renderFoot(rows); }
 
-// ─── TABS & MAIN ─────────────────────────────────────────────────────────────
-function switchTab(tab){
-  S.tab=tab;S.ind='';
-  ['twse','tpex','watch'].forEach(t=>document.getElementById('tb-'+t).classList.toggle('active',t===tab));
-  const iw=tab==='watch';
-  document.getElementById('toolMain').style.display=iw?'none':'flex';
-  document.getElementById('toolWatch').style.display=iw?'flex':'none';
-  document.getElementById('indSel').value='';
-  if(S.rows[tab]&&S.rows[tab].length>0){if(!iw)populateInd(tab);renderTable(getRows())}
-  else loadData();
+function doSort(k) {
+  if (G.sk===k) G.sd = G.sd==='asc' ? 'desc' : 'asc';
+  else { G.sk=k; G.sd='desc'; }
+  renderTable(getRows());
 }
 
-async function loadData(){
-  try{
-    if(S.tab==='twse')await loadTWSE();
-    else if(S.tab==='tpex')await loadTPEx();
+function onInd() { G.ind = document.getElementById('indS').value; renderTable(getRows()); }
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  G.tab = tab; G.ind = '';
+  var tabs = ['twse','tpex','watch'];
+  for (var i=0; i<tabs.length; i++) {
+    var el = document.getElementById('tb-'+tabs[i]);
+    el.className = 'tab' + (tabs[i]===tab ? ' on' : '');
+  }
+  var isW = tab === 'watch';
+  document.getElementById('toolM').style.display = isW ? 'none' : 'flex';
+  document.getElementById('toolW').style.display = isW ? 'flex' : 'none';
+  document.getElementById('indS').value = '';
+  if (G.rows[tab] && G.rows[tab].length > 0) {
+    if (!isW) populateInd(tab);
+    renderTable(getRows());
+  } else {
+    loadData();
+  }
+}
+
+async function loadData() {
+  try {
+    if (G.tab==='twse') await loadTWSE();
+    else if (G.tab==='tpex') await loadTPEx();
     else await loadWatch();
-  }catch(e){
-    const s=document.getElementById('sta');s.textContent='載入失敗：'+e.message;s.className='sta er';
-    document.getElementById('prog').style.display='none';
+  } catch(e) {
+    serr('載入失敗：' + e.message);
     console.error(e);
   }
 }
 
-function reload(){S.rows[S.tab]=[];loadData()}
+function reload() { G.rows[G.tab]=[]; loadData(); }
 
-// ─── DOWNLOAD ─────────────────────────────────────────────────────────────────
-function getTblData(){
-  const rows=getRows();
-  const h=COLS.map(c=>c.lb);
-  const d=rows.map((r,i)=>[i+1,r.sid,(r.name||'')+(r.ind?' ('+r.ind+')'):'',
-    r.close!=null?parseFloat(r.close).toFixed(2):'',
-    r.chg!=null?((r.chg>0?'+':'')+parseFloat(r.chg).toFixed(2)):'',
-    r.chgpct!=null?parseFloat(r.chgpct).toFixed(2)+'%':'',
-    r.rev!=null?(r.rev/1e8).toFixed(2):'',
-    r.mom!=null?parseFloat(r.mom).toFixed(2)+'%':'',
-    r.yoy!=null?parseFloat(r.yoy).toFixed(2)+'%':'',
-    r.cumrev!=null?(r.cumrev/1e8).toFixed(2):'',
-    r.cumyoy!=null?parseFloat(r.cumyoy).toFixed(2)+'%':'',
-  ]);
-  return{h,d};
-}
-function dlCSV(){
-  const{h,d}=getTblData();
-  let c='\uFEFF'+h.join(',')+'\n';
-  d.forEach(r=>{c+=r.map(v=>{const s=String(v??'');return(s.includes(',')||s.includes('"'))?'"'+s.replace(/"/g,'""')+'"':s}).join(',')+'\n'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv;charset=utf-8;'}));
-  a.download='台股月營收_'+(S.dataMonth||'data')+'.csv';a.click();
-}
-function dlXLS(){
-  const{h,d}=getTblData();
-  let x='<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n<Worksheet ss:Name="月營收"><Table>\n';
-  [h,...d].forEach(r=>{x+='<Row>'+r.map(v=>'<Cell><Data ss:Type="String">'+String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</Data></Cell>').join('')+'</Row>\n'});
-  x+='</Table></Worksheet></Workbook>';
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([x],{type:'application/vnd.ms-excel;charset=utf-8;'}));
-  a.download='台股月營收_'+(S.dataMonth||'data')+'.xls';a.click();
+// ── DOWNLOAD ─────────────────────────────────────────────────────────────────
+function getTblData() {
+  var rows = getRows();
+  var h = COLS.map(function(c){ return c.lb; });
+  var d = rows.map(function(r, i) {
+    var nameStr = (r.name||'') + (r.ind ? ' (' + r.ind + ')' : '');
+    return [
+      i+1, r.sid, nameStr,
+      r.close!=null ? parseFloat(r.close).toFixed(2) : '',
+      r.chg!=null ? (r.chg>0?'+':'')+parseFloat(r.chg).toFixed(2) : '',
+      r.pct!=null ? parseFloat(r.pct).toFixed(2)+'%' : '',
+      r.rev!=null ? (r.rev/1e8).toFixed(2) : '',
+      r.mom!=null ? parseFloat(r.mom).toFixed(2)+'%' : '',
+      r.yoy!=null ? parseFloat(r.yoy).toFixed(2)+'%' : '',
+      r.cum!=null ? (r.cum/1e8).toFixed(2) : '',
+      r.cumy!=null ? parseFloat(r.cumy).toFixed(2)+'%' : ''
+    ];
+  });
+  return {h:h, d:d};
 }
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded',()=>{renderHead();loadData()});
+function dlCSV() {
+  var td = getTblData(), csv = '\uFEFF' + td.h.join(',') + '\n';
+  td.d.forEach(function(row){
+    csv += row.map(function(v){
+      var s = String(v==null?'':v);
+      return (s.indexOf(',')>=0||s.indexOf('"')>=0) ? '"'+s.replace(/"/g,'""')+'"' : s;
+    }).join(',') + '\n';
+  });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = '台股月營收_' + (G.dm||'data') + '.csv';
+  a.click();
+}
+
+function dlXLS() {
+  var td = getTblData();
+  var x = '<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n';
+  x += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
+  x += '<Worksheet ss:Name="月營收"><Table>\n';
+  var all = [td.h].concat(td.d);
+  all.forEach(function(row){
+    x += '<Row>';
+    row.forEach(function(v){
+      var s = String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      x += '<Cell><Data ss:Type="String">'+s+'</Data></Cell>';
+    });
+    x += '</Row>\n';
+  });
+  x += '</Table></Worksheet></Workbook>';
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([x],{type:'application/vnd.ms-excel;charset=utf-8;'}));
+  a.download = '台股月營收_' + (G.dm||'data') + '.xls';
+  a.click();
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  initG();
+  renderHead();
+  loadData();
+});
+
 </script>
 </body>
 </html>
