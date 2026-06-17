@@ -48,12 +48,16 @@ tr:hover td{background:#f7f9fd}
 .rn{color:#aaa;font-size:13px}
 tfoot td{background:#f0f2f7;font-weight:600;border-top:2px solid #dde1e7;font-size:13px}
 .em{padding:40px;text-align:center;color:#aaa;font-size:15px}
+.toast{position:fixed;bottom:24px;right:24px;background:#1a6fc4;color:#fff;padding:8px 18px;border-radius:6px;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.18);opacity:0;transition:opacity .3s;z-index:999;pointer-events:none}
+.toast.show{opacity:1}
+.prt{font-size:11px;color:#aaa;margin-left:8px}
 </style>
 </head>
 <body>
 <div class="hdr">
   <h1>&#128202; 台股月營收排行</h1>
   <div class="hdr-r" id="hdrR">--</div>
+<div class="toast" id="toast"></div>
 </div>
 <div class="tabs">
   <button class="tab on" id="tb-twse" onclick="switchTab('twse')">上市 (TWSE)</button>
@@ -660,11 +664,80 @@ function dlXLS() {
   a.click();
 }
 
-// ── INIT ─────────────────────────────────────────────────────────────────────
+// ── PRICE REFRESH (stock prices only, keeps revenue) ──────────────────────────────────────────
+async function refreshPrices() {
+var st = document.getElementById('st');
+var prevMsg = st.textContent;
+st.textContent = '更新股價中...'; st.className = 'st ld';
+try {
+var res = await fetch(px(TPRC));
+var prcArr = await res.json();
+var pm = {};
+for (var i=0; i<prcArr.length; i++) {
+var p = prcArr[i];
+if (!ok4(p.Code)) continue;
+var cl = pf(p.ClosingPrice), ch = pf(p.Change), cp = null;
+if (cl!=null && ch!=null && ch!==0) { var pv=cl-ch; if(pv!==0) cp=parseFloat((ch/Math.abs(pv)*100).toFixed(2)); }
+pm[p.Code] = {close:cl, chg:ch, pct:cp};
+}
+for (var j=0; j<G.rows.twse.length; j++) {
+var r = G.rows.twse[j], pr = pm[r.sid];
+if (pr) { r.close=pr.close; r.chg=pr.chg; r.pct=pr.pct; }
+}
+for (var w=0; w<G.rows.watch.length; w++) {
+var wr = G.rows.watch[w], wpr = pm[wr.sid];
+if (wpr) { wr.close=wpr.close; wr.chg=wpr.chg; wr.pct=wpr.pct; }
+}
+renderTable(getRows());
+var now = new Date();
+var hh = String(now.getHours()).padStart(2,'0'), mmStr = String(now.getMinutes()).padStart(2,'0');
+var prtEl = document.getElementById('prt');
+if (!prtEl) { prtEl = document.createElement('span'); prtEl.id='prt'; prtEl.className='prt'; document.getElementById('hdrR').appendChild(prtEl); }
+prtEl.textContent = '股價 ' + hh + ':' + mmStr + ' 更新';
+showToast('股價已更新（' + hh + ':' + mmStr + '）');
+st.textContent = prevMsg; st.className = 'st';
+} catch(e) {
+st.textContent = prevMsg; st.className = 'st';
+console.error('refreshPrices error', e);
+}
+}
+
+function showToast(msg) {
+var t = document.getElementById('toast');
+t.textContent = msg; t.classList.add('show');
+setTimeout(function(){ t.classList.remove('show'); }, 3000);
+}
+
+// 臺灣時間 UTC+8，19:00 和 20:00 自動更新股價
+function schedulePriceRefresh() {
+var targets = [19, 20];
+function msUntilTW(h) {
+var nowMs = Date.now();
+var twNowMs = nowMs + 8 * 3600 * 1000;
+var twNow = new Date(twNowMs);
+var twTarget = new Date(twNow);
+twTarget.setUTCHours(0,0,5,0);
+twTarget.setTime(twTarget.getTime() + h * 3600 * 1000);
+var diff = twTarget.getTime() - twNow.getTime();
+if (diff <= 0) diff += 24 * 3600 * 1000;
+return diff;
+}
+targets.forEach(function(h) {
+var ms = msUntilTW(h);
+console.log('[finrev] 股價排程 ' + String(h).padStart(2,'0') + ':00 台灣時間，' + Math.round(ms/60000) + ' 分鐘後觸發');
+setTimeout(function() {
+refreshPrices();
+setInterval(function(){ refreshPrices(); }, 24 * 3600 * 1000);
+}, ms);
+});
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  initG();
-  renderHead();
-  loadData();
+initG();
+renderHead();
+loadData();
+schedulePriceRefresh();
 });
 
 </script>
