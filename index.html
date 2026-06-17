@@ -91,7 +91,7 @@ tfoot td{background:#f0f2f7;font-weight:600;border-top:2px solid #dde1e7;font-si
   </table>
 </div>
 <script>
-var PX = 'https://corsproxy.io/?url=';
+var PX = location.hostname.indexOf('pages.dev') >= 0 ? '/api/proxy?url=' : 'https://corsproxy.io/?url=';
 var TREV = 'https://openapi.twse.com.tw/v1/opendata/t187ap05_L';
 var TPRC = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
 var FINFO = 'https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInfo';
