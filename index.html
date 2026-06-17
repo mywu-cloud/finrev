@@ -554,7 +554,7 @@ function renderFoot(rows) {
     if (j===1) td.textContent='合計/平均';
     else if (col.k==='rev') td.textContent=fr(totRev);
     else if (col.k==='yoy') { td.textContent=avgYoy!=null?fp(avgYoy)+' 均':'-'; td.className=cc(avgYoy); }
-    else if (col.k==='mom') td.textContent='▲'+up+' ▼'+dn;
+    else if (col.k==='mom') { td.innerHTML='<span class="up">▲'+up+'</span> <span class="dn">▼'+dn+'</span>'; }
     else td.textContent='';
     tr.appendChild(td);
   }
