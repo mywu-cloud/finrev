@@ -249,6 +249,12 @@ async function loadTPEx() {
   var stocks = (infoData.data||[]).filter(function(s){
     return ok4(s.stock_id) && okN(s.stock_name||'') && s.type === 'tpex';
   });
+  var seenIds = {};
+  stocks = stocks.filter(function(s) {
+    if (seenIds[s.stock_id]) return false;
+    seenIds[s.stock_id] = true;
+    return true;
+  });
   spg(10, '取得 '+stocks.length+' 支上櫃股票，載入月營收...');
 
   var now = new Date();
@@ -462,7 +468,7 @@ function renderHead() {
     th.setAttribute('data-k', col.k);
     th.onclick = (function(k){ return function(){ doSort(k); }; })(col.k);
     if (G.sk === col.k) th.className += (th.className?' ':'') + (G.sd==='asc'?'sa':'sd');
-    var ico = G.sk===col.k ? (G.sd==='asc'?'&#9650;':'&#9660;') : '&#8661;';
+    var ico = G.sk===col.k ? (G.sd==='asc'?'▲':'▼') : '&#8661;';
     th.innerHTML = col.lb + '<span class="si">' + ico + '</span>';
     tr.appendChild(th);
   }
@@ -548,7 +554,7 @@ function renderFoot(rows) {
     if (j===1) td.textContent='合計/平均';
     else if (col.k==='rev') td.textContent=fr(totRev);
     else if (col.k==='yoy') { td.textContent=avgYoy!=null?fp(avgYoy)+' 均':'-'; td.className=cc(avgYoy); }
-    else if (col.k==='mom') td.textContent='&#9650;'+up+' &#9660;'+dn;
+    else if (col.k==='mom') td.textContent='▲'+up+' ▼'+dn;
     else td.textContent='';
     tr.appendChild(td);
   }
