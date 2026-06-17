@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>台股月營收排行系統</title>
-<!-- v2.0: price auto-refresh 19:00 & 20:00 TW -->
+<!-- v3.0: fix tpex mom/yoy + add tpex prices -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;background:#f5f6f8;color:#222;min-height:100vh}
@@ -248,75 +248,85 @@ async function loadTWSE() {
 
 // ── LOAD TPEX (FinMind via proxy, batched) ────────────────────────────────────
 async function loadTPEx() {
-  spg(5, '取得上櫃股票清單...');
-  var infoRes = await fetch(px(FINFO));
-  var infoData = await infoRes.json();
-  var stocks = (infoData.data||[]).filter(function(s){
-    return ok4(s.stock_id) && okN(s.stock_name||'') && s.type === 'tpex';
-  });
-  var seenIds = {};
-  stocks = stocks.filter(function(s) {
-    if (seenIds[s.stock_id]) return false;
-    seenIds[s.stock_id] = true;
-    return true;
-  });
-  spg(10, '取得 '+stocks.length+' 支上櫃股票，載入月營收...');
+spg(5, '取得上櫃股票清單...');
+var infoRes = await fetch(px(FINFO));
+var infoData = await infoRes.json();
+var stocks = (infoData.data||[]).filter(function(s){
+  return ok4(s.stock_id) && okN(s.stock_name||'') && s.type === 'tpex';
+});
+var seenIds = {};
+stocks = stocks.filter(function(s) {
+  if (seenIds[s.stock_id]) return false;
+  seenIds[s.stock_id] = true;
+  return true;
+});
+spg(10, '取得 '+stocks.length+' 支上櫃股票，載入月營收...');
 
-  var now = new Date();
-  var startDate = (now.getFullYear()-1) + '-01-01';
-  var BATCH = 30;
-  var rows = [];
-  var dm = '';
+var now = new Date();
+var startDate = (now.getFullYear()-1) + '-01-01';
+var todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+var BATCH = 30;
+var rows = [];
+var dm = '';
 
-  for (var i=0; i<stocks.length; i+=BATCH) {
-    var batch = stocks.slice(i, i+BATCH);
-    var promises = batch.map(function(s) {
-      var url = FREV + s.stock_id + '&start_date=' + startDate;
-      return fetch(px(url)).then(function(r){ return r.json(); }).then(function(d){
-        return {s: s, arr: d.status===200 ? (d.data||[]) : []};
-      }).catch(function(){ return {s: s, arr: []}; });
+for (var i=0; i<stocks.length; i+=BATCH) {
+  var batch = stocks.slice(i, i+BATCH);
+  var promises = batch.map(function(s) {
+    var rurl = FREV + s.stock_id + '&start_date=' + startDate;
+    var purl = FPRC + s.stock_id + '&start_date=' + todayStr;
+    return Promise.all([
+      fetch(px(rurl)).then(function(r){return r.json();}).catch(function(){return {status:0,data:[]};}),
+      fetch(px(purl)).then(function(r){return r.json();}).catch(function(){return {status:0,data:[]};})  
+    ]).then(function(dd){ return {s:s, arr:dd[0].status===200?(dd[0].data||[]):[], prc:dd[1].status===200?(dd[1].data||[]):[]}; })
+     .catch(function(){ return {s:s, arr:[], prc:[]}; });
+  });
+  var batchR = await Promise.all(promises);
+
+  for (var b=0; b<batchR.length; b++) {
+    var rs = batchR[b];
+    if (!rs.arr.length) continue;
+    var arr = rs.arr.slice().sort(function(a,b2){
+      return a.revenue_year !== b2.revenue_year ? a.revenue_year-b2.revenue_year : a.revenue_month-b2.revenue_month;
     });
-    var batchR = await Promise.all(promises);
-
-    for (var b=0; b<batchR.length; b++) {
-      var rs = batchR[b];
-      if (!rs.arr.length) continue;
-      var arr = rs.arr.slice().sort(function(a,b2){
-        return a.revenue_year !== b2.revenue_year ? a.revenue_year-b2.revenue_year : a.revenue_month-b2.revenue_month;
-      });
-      var map = {};
-      for (var m2=0; m2<arr.length; m2++) {
-        map[arr[m2].revenue_year+'_'+arr[m2].revenue_month] = arr[m2].revenue;
-      }
-      var last = arr[arr.length-1];
-      var y = last.revenue_year, mo = last.revenue_month, rev = last.revenue/1e8;
-      var pmRev = mo>1 ? map[y+'_'+(mo-1)] : map[(y-1)+'_12'];
-      var mom = pmRev!=null ? parseFloat(((rev-pmRev)/Math.abs(pmRev)*100).toFixed(2)) : null;
-      var pyRev = map[(y-1)+'_'+mo];
-      var yoy = pyRev!=null ? parseFloat(((rev-pyRev)/Math.abs(pyRev)*100).toFixed(2)) : null;
-      var cum=0; for(var c=1;c<=mo;c++){var cv=map[y+'_'+c];if(cv)cum+=cv;}
-      var cpv=0; for(var c2=1;c2<=mo;c2++){var cpvv=map[(y-1)+'_'+c2];if(cpvv)cpv+=cpvv;}
-      var cumy = cpv ? parseFloat(((cum-cpv)/Math.abs(cpv)*100).toFixed(2)) : null;
-      if (!dm) dm = y + '年' + mo + '月';
-      rows.push({sid:rs.s.stock_id, name:rs.s.stock_name, ind:rs.s.industry_category||'',
-        close:null, chg:null, pct:null, rev:rev, mom:mom, yoy:yoy, cum:cum?cum/1e8:null, cumy:cumy});
+    var map = {};
+    for (var m2=0; m2<arr.length; m2++) {
+      map[arr[m2].revenue_year+'_'+arr[m2].revenue_month] = arr[m2].revenue;
     }
-
-    var done = i + batch.length;
-    var pct = 10 + Math.round(done/stocks.length*82);
-    spg(pct, '上櫃載入中 '+done+'/'+stocks.length+'，已有 '+rows.length+' 筆');
-    if (rows.length && done % 150 === 0) {
-      G.rows.tpex = rows.slice();
-      if (G.tab === 'tpex') { populateInd('tpex'); renderTable(getRows()); }
-    }
+    var last = arr[arr.length-1];
+    var y = last.revenue_year, mo = last.revenue_month;
+    var rawRev = last.revenue;
+    var rev = rawRev / 1e8;
+    var pmRaw = mo>1 ? map[y+'_'+(mo-1)] : map[(y-1)+'_12'];
+    var mom = pmRaw!=null ? parseFloat(((rawRev-pmRaw)/Math.abs(pmRaw)*100).toFixed(2)) : null;
+    var pyRaw = map[(y-1)+'_'+mo];
+    var yoy = pyRaw!=null ? parseFloat(((rawRev-pyRaw)/Math.abs(pyRaw)*100).toFixed(2)) : null;
+    var cum=0; for(var c=1;c<=mo;c++){var cv=map[y+'_'+c];if(cv)cum+=cv;}
+    var cpv=0; for(var c2=1;c2<=mo;c2++){var cpvv=map[(y-1)+'_'+c2];if(cpvv)cpv+=cpvv;}
+    var cumy = cpv ? parseFloat(((cum-cpv)/Math.abs(cpv)*100).toFixed(2)) : null;
+    var lp = rs.prc.length ? rs.prc[rs.prc.length-1] : null;
+    var cl = lp ? (lp.close != null ? parseFloat(lp.close) : null) : null;
+    var sp = lp ? (lp.spread != null ? parseFloat(lp.spread) : null) : null;
+    var pct2 = (cl!=null && sp!=null && sp!==0 && (cl-sp)!==0) ? parseFloat((sp/(cl-sp)*100).toFixed(2)) : null;
+    if (!dm) dm = y + '年' + mo + '月';
+    rows.push({sid:rs.s.stock_id, name:rs.s.stock_name, ind:rs.s.industry_category||'',
+      close:cl, chg:sp, pct:pct2, rev:rev, mom:mom, yoy:yoy, cum:cum?cum/1e8:null, cumy:cumy});
   }
 
-  if (dm) G.dm = dm;
-  G.rows.tpex = rows;
-  document.getElementById('hdrR').textContent = '資料月份：' + dm;
-  cpg('上櫃：共 ' + rows.length + ' 檔，資料月份：' + dm);
-  populateInd('tpex');
-  renderTable(getRows());
+  var done = i + batch.length;
+  var pct = 10 + Math.round(done/stocks.length*82);
+  spg(pct, '上櫃載入中 '+done+'/'+stocks.length+'，已有 '+rows.length+' 筆');
+  if (rows.length && done % 150 === 0) {
+    G.rows.tpex = rows.slice();
+    if (G.tab === 'tpex') { populateInd('tpex'); renderTable(getRows()); }
+  }
+}
+
+if (dm) G.dm = dm;
+G.rows.tpex = rows;
+document.getElementById('hdrR').textContent = '資料月份：' + dm;
+cpg('上櫃：共 ' + rows.length + ' 檔，資料月份：' + dm);
+populateInd('tpex');
+renderTable(getRows());
 }
 
 // ── WATCHLIST ────────────────────────────────────────────────────────────────
