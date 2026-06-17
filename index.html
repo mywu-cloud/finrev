@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台股月營收排行系統</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  background: #f5f6f8;
+  color: #222;
+  min-height: 100vh;
+}
+a { color: inherit; text-decoration: none; }
+
+/* ── Header ── */
+.header {
+  background: #fff;
+  border-bottom: 1px solid #dde1e7;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a2e;
+  white-space: nowrap;
+}
+.data-date {
+  font-size: 13px;
+  color: #888;
+  margin-left: auto;
+}
+
+/* ── Tabs ── */
+.tab-bar {
+  display: flex;
+  background: #fff;
+  border-bottom: 2px solid #dde1e7;
+  padding: 0 20px;
+  gap: 0;
+}
+.tab-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-family: inherit;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  color: #555;
+  font-weight: 500;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.tab-btn:hover { color: #1a6fc4; }
+.tab-btn.active { color: #1a6fc4; border-bottom-color: #1a6fc4; font-weight: 700; }
+
+/* ── Toolbar ── */
+.toolbar {
+  background: #fff;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #eee;
+}
+.toolbar select, .toolbar input {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: #222;
+  height: 32px;
+}
+.toolbar select:focus, .toolbar input:focus {
+  outline: none;
+  border-color: #1a6fc4;
+}
+.btn {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 5px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  height: 32px;
+  font-weight: 500;
+  transition: background .15s;
+}
+.btn-primary { background: #1a6fc4; color: #fff; }
+.btn-primary:hover { background: #155aaa; }
+.btn-secondary { background: #e8eaf0; color: #333; }
+.btn-secondary:hover { background: #d0d4de; }
+.btn-success { background: #2a9d5c; color: #fff; }
+.btn-success:hover { background: #248050; }
+.btn-danger { background: #e05252; color: #fff; }
+.btn-danger:hover { background: #c43a3a; }
+.btn-small { padding: 3px 10px; font-size: 13px; height: 26px; }
+.spacer { flex: 1; }
+.dl-group { display: flex; gap: 6px; }
+
+/* ── Status bar ── */
+.status-bar {
+  padding: 6px 20px;
+  font-size: 13px;
+  color: #555;
+  background: #fafbfc;
+  border-bottom: 1px solid #eee;
+  min-height: 28px;
+}
+.status-bar.loading { color: #1a6fc4; }
+.status-bar.error { color: #e05252; }
+
+/* ── Table ── */
+.table-wrap {
+  overflow-x: auto;
+  padding: 0 0 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: #fff;
+}
+thead tr {
+  background: #f0f2f7;
+}
+th {
+  padding: 9px 12px;
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #dde1e7;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  background: #f0f2f7;
+  z-index: 5;
+}
+th:hover { background: #e4e7f0; }
+th.left { text-align: left; }
+th.center { text-align: center; }
+th .sort-icon { margin-left: 4px; font-size: 11px; color: #999; }
+th.sort-asc .sort-icon, th.sort-desc .sort-icon { color: #1a6fc4; }
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eeeff3;
+  text-align: right;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+td.left { text-align: left; }
+td.center { text-align: center; }
+tr:hover td { background: #f7f9fd; }
+.stock-id { font-weight: 600; color: #1a6fc4; font-size: 14px; }
+.stock-name-cell { max-width: 160px; }
+.stock-name { font-weight: 500; }
+.industry-tag {
+  font-size: 12px;
+  color: #888;
+  margin-top: 1px;
+}
+.up { color: #d9363e; }
+.down { color: #389d59; }
+.neutral { color: #888; }
+.rank { color: #aaa; font-size: 13px; }
+
+/* ── Watchlist panel ── */
+.watchlist-add {
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.watchlist-add input {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 120px;
+  height: 32px;
+}
+.watchlist-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #aaa;
+  font-size: 15px;
+}
+
+/* ── Footer stats row ── */
+tfoot td {
+  background: #f0f2f7;
+  font-weight: 600;
+  border-top: 2px solid #dde1e7;
+  color: #333;
+  font-size: 13px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .header h1 { font-size: 15px; }
+  .toolbar { padding: 8px 10px; }
+  td, th { padding: 7px 7px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📊 台股月營收排行</h1>
+  <span class="data-date" id="dataDate">資料載入中...</span>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('twse')" id="tab-twse">上市 (TWSE)</button>
+  <button class="tab-btn" onclick="switchTab('tpex')" id="tab-tpex">上櫃 (TPEx)</button>
+  <button class="tab-btn" onclick="switchTab('watch')" id="tab-watch">⭐ 自選股</button>
+</div>
+
+<!-- TWSE / TPEx toolbar -->
+<div class="toolbar" id="toolbar-main">
+  <label style="font-size:14px;color:#555;font-weight:500;">產業：</label>
+  <select id="industrySelect" onchange="onIndustryChange()">
+    <option value="">全部產業</option>
+  </select>
+  <span class="spacer"></span>
+  <div class="dl-group">
+    <button class="btn btn-secondary" onclick="downloadCSV()">⬇ CSV</button>
+    <button class="btn btn-secondary" onclick="downloadXLS()">⬇ XLS</button>
+  </div>
+  <button class="btn btn-primary" onclick="loadData()">🔄 重新載入</button>
+</div>
+
+<!-- Watchlist toolbar -->
+<div class="watchlist-add" id="toolbar-watch" style="display:none;">
+  <input type="text" id="watchInput" placeholder="輸入股票代號" maxlength="6"
+    onkeydown="if(event.key==='Enter')addWatch()">
+  <button class="btn btn-success" onclick="addWatch()">＋ 新增</button>
+  <span class="spacer"></span>
+  <div class="dl-group">
+    <button class="btn btn-secondary" onclick="downloadCSV()">⬇ CSV</button>
+    <button class="btn btn-secondary" onclick="downloadXLS()">⬇ XLS</button>
+  </div>
+  <button class="btn btn-danger btn-small" onclick="clearWatch()" style="margin-left:4px;">全部清除</button>
+</div>
+
+<div class="status-bar" id="statusBar">請稍候...</div>
+
+<div class="table-wrap">
+  <table id="mainTable">
+    <thead id="tableHead"></thead>
+    <tbody id="tableBody"></tbody>
+    <tfoot id="tableFoot"></tfoot>
+  </table>
+</div>
+</body>
+<script>
+// ════════════════════════════════════════════════════════
+//  CONFIG & STATE
+// ════════════════════════════════════════════════════════
+const COLS = [
+  { key:'rank',      label:'#',        align:'center', sortable:true  },
+  { key:'stock_id',  label:'代號',     align:'center', sortable:true  },
+  { key:'name',      label:'名稱',     align:'left',   sortable:true  },
+  { key:'close',     label:'收盤價',   align:'right',  sortable:true  },
+  { key:'change',    label:'漲跌',     align:'right',  sortable:true  },
+  { key:'change_pct',label:'漲跌幅',   align:'right',  sortable:true  },
+  { key:'revenue',   label:'月營收(億)', align:'right', sortable:true },
+  { key:'mom',       label:'月增率',   align:'right',  sortable:true  },
+  { key:'yoy',       label:'年增率',   align:'right',  sortable:true  },
+  { key:'cum_rev',   label:'累計營收', align:'right',  sortable:true  },
+  { key:'cum_yoy',   label:'累計年增率', align:'right', sortable:true },
+];
+
+const EXCLUDE_KEYWORDS = ['ETF','指數','基金','存託','特別','甲種','乙種','丙種','丁種','債券','期信','富邦','元大','國泰','永豐','統一','兆豐','台新','中信','凱基','群益','復華','野村','聯邦','玉山','宏利','安聯'];
+const EXCLUDE_KEYWORD_STRICT = ['ETF','存託憑證','特別股'];
+
+let state = {
+  tab: 'twse',          // 'twse'|'tpex'|'watch'
+  rows: [],             // displayed data rows
+  sortKey: 'revenue',
+  sortDir: 'desc',
+  industry: '',
+  watchIds: JSON.parse(localStorage.getItem('watchIds') || '[]'),
+  allRows: { twse: [], tpex: [], watch: [] },
+  industries: { twse: [], tpex: [] },
+  dataMonth: '',
+};
+
+// ════════════════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════════════════
+function fmt2(v) {
+  if (v == null || v === '' || isNaN(v)) return '--';
+  return parseFloat(v).toLocaleString('zh-TW', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmt3(v) {
+  if (v == null || v === '' || isNaN(v)) return '--';
+  return parseFloat(v).toLocaleString('zh-TW', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtRev(v) { // 億, 2dp
+  if (v == null || isNaN(v) || v === '') return '--';
+  const n = parseFloat(v) / 1e8;
+  return n.toLocaleString('zh-TW', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtPct(v) {
+  if (v == null || v === '' || isNaN(v)) return '--';
+  const n = parseFloat(v);
+  return (n > 0 ? '+' : '') + n.toLocaleString('zh-TW', {minimumFractionDigits:2, maximumFractionDigits:2}) + '%';
+}
+function colorClass(v) {
+  if (v == null || isNaN(v)) return 'neutral';
+  return parseFloat(v) > 0 ? 'up' : parseFloat(v) < 0 ? 'down' : 'neutral';
+}
+
+function isValidStock(code, name) {
+  if (!code) return false;
+  // Must be 4-digit numeric code
+  if (!/^[1-9][0-9]{3}$/.test(code)) return false;
+  if (!name) return false;
+  // Exclude by name keywords (strict)
+  for (const kw of EXCLUDE_KEYWORD_STRICT) {
+    if (name.includes(kw)) return false;
+  }
+  // Exclude ETF-pattern names
+  if (/ETF/i.test(name)) return false;
+  // Exclude industry codes known for ETF/DR
+  return true;
+}
+
+// ════════════════════════════════════════════════════════
+//  DATA FETCHING
+// ════════════════════════════════════════════════════════
+
+// Parse float safely
+function pf(s) {
+  if (!s && s !== 0) return null;
+  const n = parseFloat(String(s).replace(/,/g,''));
+  return isNaN(n) ? null : n;
+}
+
+// Fetch stock list + close prices from TWSE STOCK_DAY_ALL
+async function fetchTWSEStocks() {
+  const res = await fetch('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL');
+  if (!res.ok) throw new Error('TWSE API error: ' + res.status);
+  const data = await res.json();
+  const map = {};
+  for (const item of data) {
+    const code = (item.Code || '').trim();
+    const name = (item.Name || '').trim();
+    if (!isValidStock(code, name)) continue;
+    const close = pf(item.ClosingPrice);
+    const change = pf(item.Change);
+    let chgPct = null;
+    if (close != null && change != null && change !== 0) {
+      const prev = close - change;
+      if (prev !== 0) chgPct = parseFloat((change / Math.abs(prev) * 100).toFixed(2));
+    }
+    map[code] = { stock_id: code, name, close, change, change_pct: chgPct };
+  }
+  return map;
+}
+
+// Fetch TWSE industry list
+async function fetchTWSEIndustry() {
+  try {
+    const res = await fetch('https://openapi.twse.com.tw/v1/opendata/t187ap03_L');
+    if (!res.ok) return {};
+    const data = await res.json();
+    const map = {};
+    const IND_MAP = {
+      '01':'水泥工業','02':'食品工業','03':'塑膠工業','04':'紡織纖維',
+      '05':'電機機械','06':'電器電纜','07':'化學生技醫療','08':'玻璃陶瓷',
+      '09':'造紙工業','10':'鋼鐵工業','11':'橡膠工業','12':'汽車工業',
+      '13':'電子工業','14':'建材營造','15':'航運業','16':'觀光餐旅',
+      '17':'金融保險','18':'貿易百貨','19':'綜合','20':'其他',
+      '21':'化學工業','22':'生技醫療業','23':'油電燃氣業','24':'半導體業',
+      '25':'電腦及週邊設備業','26':'光電業','27':'通信網路業','28':'電子零組件業',
+      '29':'電子通路業','30':'資訊服務業','31':'其他電子業','32':'文化創意業',
+      '33':'農業科技業','34':'電子商務','35':'綠能環保','36':'數位雲端',
+      '37':'運動休閒','38':'居家生活'
+    };
+    for (const item of data) {
+      const code = String(item['公司代號'] || '').trim();
+      const raw = String(item['產業別'] || item['IndustryCode'] || '').trim();
+      if (!code) continue;
+      // Skip non-4-digit or special
+      if (!/^[0-9]{4}$/.test(code)) continue;
+      let ind = raw;
+      if (/^[0-9]+$/.test(raw)) ind = IND_MAP[raw.padStart(2,'0')] || raw;
+      if (ind) map[code] = ind;
+    }
+    return map;
+  } catch(e) { return {}; }
+}
+
+// Fetch TPEx stock list + prices
+async function fetchTPExStocks() {
+  const res = await fetch('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes');
+  if (!res.ok) throw new Error('TPEx API error: ' + res.status);
+  const data = await res.json();
+  const map = {};
+  for (const item of data) {
+    const code = (item.SecuritiesCompanyCode || '').trim();
+    const name = (item.CompanyName || '').trim();
+    if (!isValidStock(code, name)) continue;
+    const close = pf(item.Close);
+    const change = pf(item.Change);
+    let chgPct = null;
+    if (close != null && change != null && change !== 0) {
+      const prev = close - change;
+      if (prev !== 0) chgPct = parseFloat((change / Math.abs(prev) * 100).toFixed(2));
+    }
+    const ind = (item.IndustryCode || '').trim() || null;
+    map[code] = { stock_id: code, name, close, change, change_pct: chgPct, industry: ind };
+  }
+  return map;
+}
+
+// Fetch revenue from TWSE/TPEx MOPS (月營收)
+// TWSE monthly revenue: openapi.twse.com.tw - t21sc03 (上市公司月營收)
+async function fetchTWSERevenue() {
+  // t21sc03: 上市公司月營收彙總
+  const res = await fetch('https://openapi.twse.com.tw/v1/mops/t21sc03');
+  if (!res.ok) throw new Error('TWSE revenue API error');
+  return await res.json();
+}
+
+async function fetchTPExRevenue() {
+  // TPEx mopsfin_t21sc03: 上櫃公司月營收
+  const res = await fetch('https://www.tpex.org.tw/openapi/v1/mopsfin_t21sc03');
+  if (!res.ok) throw new Error('TPEx revenue API error');
+  return await res.json();
+}
+
+// Parse revenue data from TWSE/TPEx t21sc03 format
+function parseRevenue(data) {
+  // Fields: 公司代號, 公司名稱, 當月營收, 上月營收, 去年當月營收, 月增率, 年增率,
+  //         當月累計, 去年累計, 累計年增率
+  const map = {};
+  let yearMonth = '';
+  for (const item of data) {
+    const code = String(item['公司代號'] || item.stock_id || '').trim();
+    if (!code) continue;
+    const rev     = pf(item['當月營收'] || item.revenue);
+    const revPrev = pf(item['上月營收']);
+    const revYoy  = pf(item['去年當月營收']);
+    let mom = pf(item['月增率']);
+    let yoy = pf(item['年增率']);
+    const cumRev  = pf(item['當月累計']);
+    const cumYoy  = pf(item['累計年增率']);
+    const ym      = String(item['出表日期'] || item['資料年月'] || '').trim();
+    if (ym && !yearMonth) yearMonth = ym;
+    // Compute MoM/YoY if not provided
+    if (mom == null && rev != null && revPrev != null && revPrev !== 0) {
+      mom = parseFloat(((rev - revPrev) / Math.abs(revPrev) * 100).toFixed(2));
+    }
+    if (yoy == null && rev != null && revYoy != null && revYoy !== 0) {
+      yoy = parseFloat(((rev - revYoy) / Math.abs(revYoy) * 100).toFixed(2));
+    }
+    map[code] = { revenue: rev, mom, yoy, cum_rev: cumRev, cum_yoy: cumYoy };
+  }
+  return { map, yearMonth };
+}
+
+// ════════════════════════════════════════════════════════
+//  MERGE & BUILD ROWS
+// ════════════════════════════════════════════════════════
+function buildRows(stockMap, revMap, industryMap, market) {
+  const rows = [];
+  for (const [code, stock] of Object.entries(stockMap)) {
+    const rev = revMap[code] || {};
+    const industry = (industryMap && industryMap[code]) || stock.industry || '';
+    rows.push({
+      stock_id: code,
+      name: stock.name,
+      industry,
+      close: stock.close,
+      change: stock.change,
+      change_pct: stock.change_pct,
+      revenue: rev.revenue != null ? rev.revenue : null,
+      mom: rev.mom != null ? rev.mom : null,
+      yoy: rev.yoy != null ? rev.yoy : null,
+      cum_rev: rev.cum_rev != null ? rev.cum_rev : null,
+      cum_yoy: rev.cum_yoy != null ? rev.cum_yoy : null,
+      market,
+    });
+  }
+  // Only keep rows with revenue data
+  return rows.filter(r => r.revenue != null);
+}
+
+// ════════════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════════════
+function renderTable(rows) {
+  renderHead();
+  renderBody(rows);
+  renderFoot(rows);
+}
+
+function renderHead() {
+  const head = document.getElementById('tableHead');
+  const tr = document.createElement('tr');
+  for (const col of COLS) {
+    const th = document.createElement('th');
+    th.className = col.align;
+    if (col.sortable) {
+      th.style.cursor = 'pointer';
+      th.onclick = () => doSort(col.key);
+    }
+    let icon = '';
+    if (state.sortKey === col.key) {
+      icon = state.sortDir === 'asc' ? ' ▲' : ' ▼';
+      th.classList.add('sort-' + state.sortDir);
+    } else if (col.sortable) {
+      icon = ' ⇅';
+    }
+    th.innerHTML = col.label + '<span class="sort-icon">' + icon + '</span>';
+    tr.appendChild(th);
+  }
+  head.innerHTML = '';
+  head.appendChild(tr);
+}
+
+function renderBody(rows) {
+  const tbody = document.getElementById('tableBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="' + COLS.length + '" style="text-align:center;padding:40px;color:#aaa;">無資料</td></tr>';
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  rows.forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    COLS.forEach(col => {
+      const td = document.createElement('td');
+      td.className = col.align;
+      switch(col.key) {
+        case 'rank':
+          td.innerHTML = '<span class="rank">' + (idx+1) + '</span>';
+          break;
+        case 'stock_id':
+          td.innerHTML = '<span class="stock-id">' + row.stock_id + '</span>';
+          break;
+        case 'name':
+          td.className = 'left stock-name-cell';
+          td.innerHTML = '<div class="stock-name">' + (row.name||'--') + '</div>' +
+            (row.industry ? '<div class="industry-tag">' + row.industry + '</div>' : '');
+          break;
+        case 'close':
+          td.textContent = row.close != null ? fmt2(row.close) : '--';
+          break;
+        case 'change':
+          td.className = 'right ' + colorClass(row.change);
+          td.textContent = row.change != null ? (row.change > 0 ? '+' : '') + fmt2(row.change) : '--';
+          break;
+        case 'change_pct':
+          td.className = 'right ' + colorClass(row.change_pct);
+          td.textContent = fmtPct(row.change_pct);
+          break;
+        case 'revenue':
+          td.textContent = fmtRev(row.revenue);
+          break;
+        case 'mom':
+          td.className = 'right ' + colorClass(row.mom);
+          td.textContent = fmtPct(row.mom);
+          break;
+        case 'yoy':
+          td.className = 'right ' + colorClass(row.yoy);
+          td.textContent = fmtPct(row.yoy);
+          break;
+        case 'cum_rev':
+          td.textContent = fmtRev(row.cum_rev);
+          break;
+        case 'cum_yoy':
+          td.className = 'right ' + colorClass(row.cum_yoy);
+          td.textContent = fmtPct(row.cum_yoy);
+          break;
+      }
+      tr.appendChild(td);
+    });
+    // Watchlist delete button for watch tab
+    if (state.tab === 'watch') {
+      const lastTd = tr.lastChild;
+      const orig = lastTd.textContent;
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-danger btn-small';
+      delBtn.style.marginLeft = '8px';
+      delBtn.textContent = '✕';
+      delBtn.onclick = (e) => { e.stopPropagation(); removeWatch(row.stock_id); };
+      const wrapper = document.createElement('span');
+      wrapper.textContent = orig;
+      lastTd.textContent = '';
+      lastTd.appendChild(wrapper);
+      lastTd.appendChild(delBtn);
+    }
+    frag.appendChild(tr);
+  });
+  tbody.innerHTML = '';
+  tbody.appendChild(frag);
+}
+
+function renderFoot(rows) {
+  const tfoot = document.getElementById('tableFoot');
+  if (!rows.length) { tfoot.innerHTML=''; return; }
+  const totalRev = rows.reduce((s,r) => r.revenue ? s + r.revenue : s, 0);
+  const yoyVals = rows.filter(r => r.yoy != null).map(r => r.yoy);
+  const avgYoy = yoyVals.length ? (yoyVals.reduce((a,b)=>a+b,0)/yoyVals.length) : null;
+  const posCount = rows.filter(r => r.yoy != null && r.yoy > 0).length;
+  const negCount = rows.filter(r => r.yoy != null && r.yoy < 0).length;
+  const tr = document.createElement('tr');
+  COLS.forEach((col, i) => {
+    const td = document.createElement('td');
+    td.className = col.align;
+    if (i === 1) td.textContent = '合計/平均';
+    else if (col.key === 'revenue') td.textContent = fmtRev(totalRev);
+    else if (col.key === 'yoy') {
+      td.textContent = avgYoy != null ? fmtPct(avgYoy) + ' 平均' : '--';
+      td.className = 'right ' + colorClass(avgYoy);
+    }
+    else if (col.key === 'mom') td.textContent = '▲' + posCount + ' ▼' + negCount;
+    else td.textContent = '';
+    tr.appendChild(td);
+  });
+  tfoot.innerHTML = '';
+  tfoot.appendChild(tr);
+}
+
+// ════════════════════════════════════════════════════════
+//  SORT & FILTER
+// ════════════════════════════════════════════════════════
+function doSort(key) {
+  if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+  else { state.sortKey = key; state.sortDir = 'desc'; }
+  renderTable(getCurrentRows());
+}
+
+function getCurrentRows() {
+  let rows = state.allRows[state.tab] || [];
+  // Industry filter for main tabs
+  if ((state.tab === 'twse' || state.tab === 'tpex') && state.industry) {
+    rows = rows.filter(r => r.industry === state.industry);
+  }
+  // Sort
+  rows = [...rows].sort((a, b) => {
+    let av = a[state.sortKey], bv = b[state.sortKey];
+    // rank: use original index (just sort by revenue desc by default before ranking)
+    if (state.sortKey === 'rank') { av = a.revenue; bv = b.revenue; }
+    if (state.sortKey === 'name') { av = a.name||''; bv = b.name||''; return state.sortDir==='asc' ? av.localeCompare(bv,'zh-TW') : bv.localeCompare(av,'zh-TW'); }
+    if (state.sortKey === 'stock_id') { av = a.stock_id||''; bv = b.stock_id||''; return state.sortDir==='asc' ? av.localeCompare(bv) : bv.localeCompare(av); }
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    const diff = parseFloat(av) - parseFloat(bv);
+    return state.sortDir === 'asc' ? diff : -diff;
+  });
+  return rows;
+}
+
+function onIndustryChange() {
+  state.industry = document.getElementById('industrySelect').value;
+  renderTable(getCurrentRows());
+  updateStatus();
+}
+
+function updateStatus() {
+  const rows = getCurrentRows();
+  const bar = document.getElementById('statusBar');
+  bar.className = 'status-bar';
+  let label = state.tab === 'twse' ? '上市' : state.tab === 'tpex' ? '上櫃' : '自選股';
+  bar.textContent = label + '：共 ' + rows.length + ' 檔，資料月份：' + (state.dataMonth || '--');
+}
+
+// ════════════════════════════════════════════════════════
+//  INDUSTRY DROPDOWN
+// ════════════════════════════════════════════════════════
+function populateIndustrySelect(tab) {
+  const sel = document.getElementById('industrySelect');
+  const rows = state.allRows[tab] || [];
+  const inds = [...new Set(rows.map(r => r.industry).filter(Boolean))].sort((a,b) => a.localeCompare(b,'zh-TW'));
+  state.industries[tab] = inds;
+  sel.innerHTML = '<option value="">全部產業</option>';
+  inds.forEach(ind => {
+    const opt = document.createElement('option');
+    opt.value = ind; opt.textContent = ind;
+    if (ind === state.industry) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  LOAD DATA
+// ════════════════════════════════════════════════════════
+function setStatus(msg, cls) {
+  const bar = document.getElementById('statusBar');
+  bar.textContent = msg;
+  bar.className = 'status-bar ' + (cls || '');
+}
+
+async function loadData() {
+  const tab = state.tab;
+  if (tab === 'watch') { await loadWatchData(); return; }
+
+  setStatus('載入中...', 'loading');
+  try {
+    let stockMap, revData, indMap;
+    if (tab === 'twse') {
+      [stockMap, revData, indMap] = await Promise.all([
+        fetchTWSEStocks(),
+        fetchTWSERevenue(),
+        fetchTWSEIndustry(),
+      ]);
+    } else {
+      [stockMap, revData] = await Promise.all([
+        fetchTPExStocks(),
+        fetchTPExRevenue(),
+      ]);
+      indMap = null;
+    }
+
+    const { map: revMap, yearMonth } = parseRevenue(revData);
+    if (yearMonth) state.dataMonth = yearMonth;
+
+    // Merge industry into stockMap for TPEx
+    if (tab === 'tpex') {
+      for (const [code, stock] of Object.entries(stockMap)) {
+        if (!stock.industry) stock.industry = '';
+      }
+    }
+
+    const rows = buildRows(stockMap, revMap, indMap, tab.toUpperCase());
+    state.allRows[tab] = rows;
+    state.industry = '';
+    document.getElementById('industrySelect').value = '';
+
+    // Populate industry dropdown
+    populateIndustrySelect(tab);
+
+    const sorted = getCurrentRows();
+    renderTable(sorted);
+    updateStatus();
+    document.getElementById('dataDate').textContent = '資料月份：' + (state.dataMonth || '--');
+
+  } catch(err) {
+    setStatus('載入失敗：' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  WATCHLIST
+// ════════════════════════════════════════════════════════
+function saveWatch() {
+  localStorage.setItem('watchIds', JSON.stringify(state.watchIds));
+}
+
+function addWatch() {
+  const inp = document.getElementById('watchInput');
+  const code = inp.value.trim().toUpperCase();
+  inp.value = '';
+  if (!code) return;
+  if (!/^[0-9A-Z]{4,6}$/.test(code)) {
+    alert('請輸入有效股票代號（4碼數字）');
+    return;
+  }
+  if (state.watchIds.includes(code)) {
+    alert(code + ' 已在自選股清單中');
+    return;
+  }
+  state.watchIds.push(code);
+  saveWatch();
+  if (state.tab === 'watch') loadWatchData();
+}
+
+function removeWatch(code) {
+  state.watchIds = state.watchIds.filter(id => id !== code);
+  saveWatch();
+  if (state.tab === 'watch') loadWatchData();
+}
+
+function clearWatch() {
+  if (!confirm('確定清除所有自選股？')) return;
+  state.watchIds = [];
+  saveWatch();
+  state.allRows.watch = [];
+  renderTable([]);
+  updateWatchStatus();
+}
+
+function updateWatchStatus() {
+  const bar = document.getElementById('statusBar');
+  bar.className = 'status-bar';
+  bar.textContent = '自選股：共 ' + state.watchIds.length + ' 檔，資料月份：' + (state.dataMonth || '--');
+}
+
+async function loadWatchData() {
+  if (!state.watchIds.length) {
+    state.allRows.watch = [];
+    renderTable([]);
+    updateWatchStatus();
+    return;
+  }
+  setStatus('載入自選股資料中...', 'loading');
+  try {
+    // Fetch both markets' data
+    const [twseStocks, tpexStocks, twseRev, tpexRev, twseInd] = await Promise.all([
+      fetchTWSEStocks().catch(() => ({})),
+      fetchTPExStocks().catch(() => ({})),
+      fetchTWSERevenue().catch(() => ([])),
+      fetchTPExRevenue().catch(() => ([])),
+      fetchTWSEIndustry().catch(() => ({})),
+    ]);
+
+    const { map: twseRevMap, yearMonth: ym1 } = parseRevenue(twseRev);
+    const { map: tpexRevMap, yearMonth: ym2 } = parseRevenue(tpexRev);
+    if (ym1 || ym2) state.dataMonth = ym1 || ym2;
+
+    const rows = [];
+    for (const code of state.watchIds) {
+      const stock = twseStocks[code] || tpexStocks[code];
+      if (!stock) {
+        rows.push({
+          stock_id: code, name: '(查無資料)', industry: '',
+          close: null, change: null, change_pct: null,
+          revenue: null, mom: null, yoy: null, cum_rev: null, cum_yoy: null,
+          market: '?'
+        });
+        continue;
+      }
+      const revMap = twseStocks[code] ? twseRevMap : tpexRevMap;
+      const rev = revMap[code] || {};
+      const industry = twseInd[code] || stock.industry || '';
+      rows.push({
+        stock_id: code,
+        name: stock.name,
+        industry,
+        close: stock.close,
+        change: stock.change,
+        change_pct: stock.change_pct,
+        revenue: rev.revenue != null ? rev.revenue : null,
+        mom: rev.mom != null ? rev.mom : null,
+        yoy: rev.yoy != null ? rev.yoy : null,
+        cum_rev: rev.cum_rev != null ? rev.cum_rev : null,
+        cum_yoy: rev.cum_yoy != null ? rev.cum_yoy : null,
+        market: twseStocks[code] ? 'TWSE' : 'TPEx',
+      });
+    }
+    state.allRows.watch = rows;
+    renderTable(getCurrentRows());
+    updateWatchStatus();
+    document.getElementById('dataDate').textContent = '資料月份：' + (state.dataMonth || '--');
+  } catch(err) {
+    setStatus('自選股載入失敗：' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════════════
+function switchTab(tab) {
+  state.tab = tab;
+  state.industry = '';
+
+  // Update tab buttons
+  ['twse','tpex','watch'].forEach(t => {
+    const btn = document.getElementById('tab-' + t);
+    btn.classList.toggle('active', t === tab);
+  });
+
+  // Show/hide toolbars
+  const mainToolbar = document.getElementById('toolbar-main');
+  const watchToolbar = document.getElementById('toolbar-watch');
+  if (tab === 'watch') {
+    mainToolbar.style.display = 'none';
+    watchToolbar.style.display = 'flex';
+  } else {
+    mainToolbar.style.display = 'flex';
+    watchToolbar.style.display = 'none';
+  }
+
+  // Reset industry select
+  const sel = document.getElementById('industrySelect');
+  sel.value = '';
+
+  // If data already loaded, re-render; otherwise load
+  if (state.allRows[tab] && state.allRows[tab].length > 0) {
+    if (tab !== 'watch') populateIndustrySelect(tab);
+    renderTable(getCurrentRows());
+    updateStatus();
+  } else {
+    loadData();
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  DOWNLOAD
+// ════════════════════════════════════════════════════════
+function getTableData() {
+  const rows = getCurrentRows();
+  const headers = COLS.map(c => c.label);
+  const dataRows = rows.map((row, idx) => [
+    idx + 1,
+    row.stock_id,
+    row.name + (row.industry ? ' (' + row.industry + ')' : ''),
+    row.close != null ? parseFloat(row.close).toFixed(2) : '',
+    row.change != null ? (row.change > 0 ? '+' : '') + parseFloat(row.change).toFixed(2) : '',
+    row.change_pct != null ? parseFloat(row.change_pct).toFixed(2) + '%' : '',
+    row.revenue != null ? (row.revenue / 1e8).toFixed(2) : '',
+    row.mom != null ? parseFloat(row.mom).toFixed(2) + '%' : '',
+    row.yoy != null ? parseFloat(row.yoy).toFixed(2) + '%' : '',
+    row.cum_rev != null ? (row.cum_rev / 1e8).toFixed(2) : '',
+    row.cum_yoy != null ? parseFloat(row.cum_yoy).toFixed(2) + '%' : '',
+  ]);
+  return { headers, dataRows };
+}
+
+function downloadCSV() {
+  const { headers, dataRows } = getTableData();
+  let csv = '\uFEFF'; // UTF-8 BOM for Excel
+  csv += headers.join(',') + '\n';
+  dataRows.forEach(row => {
+    csv += row.map(v => {
+      const s = String(v == null ? '' : v);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) return '"' + s.replace(/"/g,'""') + '"';
+      return s;
+    }).join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '台股月營收_' + (state.dataMonth || 'data') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadXLS() {
+  const { headers, dataRows } = getTableData();
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<?mso-application progid="Excel.Sheet"?>\n';
+  xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"\n';
+  xml += ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
+  xml += '<Worksheet ss:Name="月營收排行">\n<Table>\n';
+  const allRows = [headers, ...dataRows];
+  allRows.forEach(row => {
+    xml += '<Row>\n';
+    row.forEach(v => {
+      const s = String(v == null ? '' : v);
+      const isNum = !isNaN(s.replace('%','').replace('+','')) && s !== '' && !s.includes('(');
+      if (isNum && !s.includes('%') && !s.includes('+') && !s.includes('-') || (!isNaN(s) && s !== '')) {
+        xml += '<Cell><Data ss:Type="String">' + s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</Data></Cell>\n';
+      } else {
+        xml += '<Cell><Data ss:Type="String">' + s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</Data></Cell>\n';
+      }
+    });
+    xml += '</Row>\n';
+  });
+  xml += '</Table>\n</Worksheet>\n</Workbook>';
+  const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '台股月營收_' + (state.dataMonth || 'data') + '.xls';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  renderHead(); // render empty header first
+  loadData();   // auto-load TWSE on start
+});
+</script>
+</html>
