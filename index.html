@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>台股月營收排行系统</title>
-<!-- v4.0: industry col + stock detail modal w/ chart -->
+<!-- v4.1: fix TPEx prices (30d window, filter 0-close, spread=0 shows 0%) -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;background:#f5f6f8;color:#222;min-height:100vh}
@@ -151,7 +151,7 @@ var seenIds={};
 stocks=stocks.filter(function(s){if(seenIds[s.stock_id])return false;seenIds[s.stock_id]=true;return true;});
 spg(10,"取得 "+stocks.length+" 支上櫃股票，載入月營收...");
 var now=new Date(),startDate=(now.getFullYear()-1)+"-01-01";
-var priceDate=new Date(now.getTime()-7*86400000);var todayStr=priceDate.getFullYear()+"-"+String(priceDate.getMonth()+1).padStart(2,"0")+"-"+String(priceDate.getDate()).padStart(2,"0");
+var priceDate=new Date(now.getTime()-30*86400000);var todayStr=priceDate.getFullYear()+"-"+String(priceDate.getMonth()+1).padStart(2,"0")+"-"+String(priceDate.getDate()).padStart(2,"0");
 var BATCH=PX.indexOf("proxy?url=")>=0?30:10,rows=[],dm="";
 for(var i=0;i<stocks.length;i+=BATCH){
 var batch=stocks.slice(i,i+BATCH);
@@ -175,10 +175,10 @@ var yoy=pyRaw!=null?parseFloat(((rawRev-pyRaw)/Math.abs(pyRaw)*100).toFixed(2)):
 var cum=0;for(var c=1;c<=mo;c++){var cv=map[y+"_"+c];if(cv)cum+=cv;}
 var cpv=0;for(var c2=1;c2<=mo;c2++){var cpvv=map[(y-1)+"_"+c2];if(cpvv)cpv+=cpvv;}
 var cumy=cpv?parseFloat(((cum-cpv)/Math.abs(cpv)*100).toFixed(2)):null;
-var lp=rs.prc.length?rs.prc[rs.prc.length-1]:null;
-var cl=lp?(lp.close!=null?parseFloat(lp.close):null):null;
-var sp=lp?(lp.spread!=null?parseFloat(lp.spread):null):null;
-var pct2=(cl!=null&&sp!=null&&sp!==0&&(cl-sp)!==0)?parseFloat((sp/(cl-sp)*100).toFixed(2)):null;
+var prcFiltered=rs.prc.filter(function(p){return p.close>0;});var lp2=prcFiltered.length?prcFiltered[prcFiltered.length-1]:null;
+var cl=lp2!=null?parseFloat(lp2.close):null;
+var sp=lp2!=null&&lp2.spread!=null?parseFloat(lp2.spread):null;
+var pct2=(cl!=null&&sp!=null)?((cl-sp)>0?parseFloat((sp/(cl-sp)*100).toFixed(2)):(sp===0?0:null)):null;
 if(!dm)dm=y+"年"+mo+"月";
 rows.push({sid:rs.s.stock_id,name:rs.s.stock_name,ind:rs.s.industry_category||"",close:cl,chg:sp,pct:pct2,rev:rev,mom:mom,yoy:yoy,cum:cum?cum/1e8:null,cumy:cumy});
 }
@@ -212,7 +212,7 @@ spg(40,"取得自選股月營收...");
 var pArr=ids.map(function(id){if(twseRevMap[id]){var rv=twseRevMap[id],pr2=twsePrcMap[id]||{};return Promise.resolve({sid:id,name:rv.name||id,ind:rv.ind||"",close:pr2.close||null,chg:pr2.chg||null,pct:pr2.pct||null,rev:rv.rev,mom:rv.mom,yoy:rv.yoy,cum:rv.cum,cumy:rv.cumy});}
 var si=tpexInfo[id];
 var ru=FREV+id+"&start_date="+startDate;
-var pu=FPRC+id+"&start_date="+(now.getFullYear()+"-"+(String(now.getMonth()+1).padStart(2,"0"))+"-01");
+var priceDate2=new Date(now.getTime()-30*86400000);var pu=FPRC+id+"&start_date="+priceDate2.getFullYear()+"-"+String(priceDate2.getMonth()+1).padStart(2,"0")+"-"+String(priceDate2.getDate()).padStart(2,"0");
 return Promise.all([fetch(px(ru)),fetch(px(pu))]).then(function(rs2){return Promise.all([rs2[0].json(),rs2[1].json()]);}).then(function(dd){
 var revArr2=dd[0].data||[],prcArr2=dd[1].data||[];
 if(!revArr2.length)return{sid:id,name:si?si.stock_name:id,ind:si?si.industry_category:"",close:null,chg:null,pct:null,rev:null,mom:null,yoy:null,cum:null,cumy:null};
@@ -226,9 +226,9 @@ var yoy2=pyr!=null?parseFloat(((rv2-pyr)/Math.abs(pyr)*100).toFixed(2)):null;
 var cm2=0;for(var ci=1;ci<=m3;ci++){var cv2=mp2[y2+"_"+ci];if(cv2)cm2+=cv2;}
 var cp3=0;for(var ci2=1;ci2<=m3;ci2++){var cv3=mp2[(y2-1)+"_"+ci2];if(cv3)cp3+=cv3;}
 var cumy2=cp3?parseFloat(((cm2-cp3)/Math.abs(cp3)*100).toFixed(2)):null;
-var lp=prcArr2[prcArr2.length-1]||{},pp=prcArr2[prcArr2.length-2]||{};
-var cl2=lp.close!=null?parseFloat(lp.close):null,ch2=null,pct3=null;
-if(pp.close&&cl2!=null){ch2=parseFloat((cl2-pp.close).toFixed(2));pct3=parseFloat((ch2/pp.close*100).toFixed(2));}
+var pf2=prcArr2.filter(function(p){return p.close>0;});var lp3=pf2.length?pf2[pf2.length-1]:null;
+var cl2=lp3!=null?parseFloat(lp3.close):null;var sp3=lp3!=null&&lp3.spread!=null?parseFloat(lp3.spread):null;
+var ch2=sp3,pct3=(cl2!=null&&sp3!=null)?((cl2-sp3)>0?parseFloat((sp3/(cl2-sp3)*100).toFixed(2)):(sp3===0?0:null)):null;
 return{sid:id,name:si?si.stock_name:id,ind:si?si.industry_category:"",close:cl2,chg:ch2,pct:pct3,rev:rv2!=null?rv2/1e8:null,mom:mom2,yoy:yoy2,cum:cm2?cm2/1e8:null,cumy:cumy2};
 }).catch(function(){return{sid:id,name:si?si.stock_name:id,ind:"",close:null,chg:null,pct:null,rev:null,mom:null,yoy:null,cum:null,cumy:null};});
 });
