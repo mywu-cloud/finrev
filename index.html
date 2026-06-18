@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>台股月營收排行系统</title>
-<!-- v4.3: TPEx price fetch top 300 by rev to avoid FinMind rate limit -->
+<!-- v4.4: reduce batch size, add delays, handle 402 rate limit gracefully -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;background:#f5f6f8;color:#222;min-height:100vh}
@@ -146,12 +146,12 @@ renderTable(getRows());
 async function loadTPEx(){
 spg(5,"取得上櫃股票清單...");
 var infoRes=await fetch(px(FINFO)),infoData=await infoRes.json();
-var stocks=(infoData.data||[]).filter(function(s){return ok4(s.stock_id)&&okN(s.stock_name||"")&&s.type==="tpex";});
+if(infoData.status===402){serr("上櫃：FinMind API 請求已達上限，請稍候再試(免費版限制)");return;}var stocks=(infoData.data||[]).filter(function(s){return ok4(s.stock_id)&&okN(s.stock_name||"")&&s.type==="tpex";});
 var seenIds={};
 stocks=stocks.filter(function(s){if(seenIds[s.stock_id])return false;seenIds[s.stock_id]=true;return true;});
 spg(10,"取得 "+stocks.length+" 支上櫃股票，載入月營收...");
 var now=new Date(),startDate=(now.getFullYear()-1)+"-01-01";
-var BATCH=PX.indexOf("proxy?url=")>=0?30:10,rows=[],dm="";
+var BATCH=PX.indexOf("proxy?url=")>=0?15:5,rows=[],dm="";
 for(var i=0;i<stocks.length;i+=BATCH){
 var batch=stocks.slice(i,i+BATCH);
 var promises=batch.map(function(s){
@@ -179,6 +179,7 @@ var done=i+batch.length;
 var pct=10+Math.round(done/stocks.length*60);
 spg(pct,"上櫃營收載入中 "+done+"/"+stocks.length+"，已有 "+rows.length+" 筆");
 if(rows.length&&done%150===0){G.rows.tpex=rows.slice();if(G.tab==="tpex"){populateInd("tpex");renderTable(getRows());}}
+if(i+BATCH<stocks.length)await new Promise(function(r){setTimeout(r,300);});
 }
 if(dm)G.dm=dm;
 G.rows.tpex=rows;
