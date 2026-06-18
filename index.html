@@ -151,8 +151,8 @@ var seenIds={};
 stocks=stocks.filter(function(s){if(seenIds[s.stock_id])return false;seenIds[s.stock_id]=true;return true;});
 spg(10,"取得 "+stocks.length+" 支上櫃股票，載入月營收...");
 var now=new Date(),startDate=(now.getFullYear()-1)+"-01-01";
-var todayStr=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
-var BATCH=30,rows=[],dm="";
+var priceDate=new Date(now.getTime()-7*86400000);var todayStr=priceDate.getFullYear()+"-"+String(priceDate.getMonth()+1).padStart(2,"0")+"-"+String(priceDate.getDate()).padStart(2,"0");
+var BATCH=PX.indexOf("proxy?url=")>=0?30:10,rows=[],dm="";
 for(var i=0;i<stocks.length;i+=BATCH){
 var batch=stocks.slice(i,i+BATCH);
 var promises=batch.map(function(s){
