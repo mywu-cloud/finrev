@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>台股月營收排行系统</title>
-<!-- v4.1: fix TPEx prices (30d window, filter 0-close, spread=0 shows 0%) -->
+<!-- v4.2: split rev/price fetch; price=30d, filter zero-close, pct shows 0.00% -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;background:#f5f6f8;color:#222;min-height:100vh}
@@ -151,15 +151,12 @@ var seenIds={};
 stocks=stocks.filter(function(s){if(seenIds[s.stock_id])return false;seenIds[s.stock_id]=true;return true;});
 spg(10,"取得 "+stocks.length+" 支上櫃股票，載入月營收...");
 var now=new Date(),startDate=(now.getFullYear()-1)+"-01-01";
-var priceDate=new Date(now.getTime()-30*86400000);var todayStr=priceDate.getFullYear()+"-"+String(priceDate.getMonth()+1).padStart(2,"0")+"-"+String(priceDate.getDate()).padStart(2,"0");
 var BATCH=PX.indexOf("proxy?url=")>=0?30:10,rows=[],dm="";
 for(var i=0;i<stocks.length;i+=BATCH){
 var batch=stocks.slice(i,i+BATCH);
 var promises=batch.map(function(s){
 var rurl=FREV+s.stock_id+"&start_date="+startDate;
-var purl=FPRC+s.stock_id+"&start_date="+todayStr;
-return Promise.all([fetch(px(rurl)).then(function(r){return r.json();}).catch(function(){return{status:0,data:[]};}) ,fetch(px(purl)).then(function(r){return r.json();}).catch(function(){return{status:0,data:[]};})  ]).then(function(dd){return{s:s,arr:dd[0].status===200?(dd[0].data||[]):[],prc:dd[1].status===200?(dd[1].data||[]):[]};})
-.catch(function(){return{s:s,arr:[],prc:[]};});
+return fetch(px(rurl)).then(function(r){return r.json();}).catch(function(){return{status:0,data:[]};}).then(function(d){return{s:s,arr:d.status===200?(d.data||[]):[]}; });
 });
 var batchR=await Promise.all(promises);
 for(var b=0;b<batchR.length;b++){
@@ -175,23 +172,49 @@ var yoy=pyRaw!=null?parseFloat(((rawRev-pyRaw)/Math.abs(pyRaw)*100).toFixed(2)):
 var cum=0;for(var c=1;c<=mo;c++){var cv=map[y+"_"+c];if(cv)cum+=cv;}
 var cpv=0;for(var c2=1;c2<=mo;c2++){var cpvv=map[(y-1)+"_"+c2];if(cpvv)cpv+=cpvv;}
 var cumy=cpv?parseFloat(((cum-cpv)/Math.abs(cpv)*100).toFixed(2)):null;
-var prcFiltered=rs.prc.filter(function(p){return p.close>0;});var lp2=prcFiltered.length?prcFiltered[prcFiltered.length-1]:null;
-var cl=lp2!=null?parseFloat(lp2.close):null;
-var sp=lp2!=null&&lp2.spread!=null?parseFloat(lp2.spread):null;
-var pct2=(cl!=null&&sp!=null)?((cl-sp)>0?parseFloat((sp/(cl-sp)*100).toFixed(2)):(sp===0?0:null)):null;
 if(!dm)dm=y+"年"+mo+"月";
-rows.push({sid:rs.s.stock_id,name:rs.s.stock_name,ind:rs.s.industry_category||"",close:cl,chg:sp,pct:pct2,rev:rev,mom:mom,yoy:yoy,cum:cum?cum/1e8:null,cumy:cumy});
+rows.push({sid:rs.s.stock_id,name:rs.s.stock_name,ind:rs.s.industry_category||"",close:null,chg:null,pct:null,rev:rev,mom:mom,yoy:yoy,cum:cum?cum/1e8:null,cumy:cumy});
 }
 var done=i+batch.length;
-var pct=10+Math.round(done/stocks.length*82);
-spg(pct,"上櫃載入中 "+done+"/"+stocks.length+"，已有 "+rows.length+" 筆");
+var pct=10+Math.round(done/stocks.length*60);
+spg(pct,"上櫃營收載入中 "+done+"/"+stocks.length+"，已有 "+rows.length+" 筆");
 if(rows.length&&done%150===0){G.rows.tpex=rows.slice();if(G.tab==="tpex"){populateInd("tpex");renderTable(getRows());}}
 }
 if(dm)G.dm=dm;
 G.rows.tpex=rows;
 document.getElementById("hdrR").textContent="資料月份："+dm;
+populateInd("tpex");renderTable(getRows());
+cpg("上櫃：共 "+rows.length+" 檔，資料月份："+dm+"（載入股價中...）");
+var priceDate=new Date(now.getTime()-30*86400000);
+var todayStr=priceDate.getFullYear()+"-"+String(priceDate.getMonth()+1).padStart(2,"0")+"-"+String(priceDate.getDate()).padStart(2,"0");
+var PBATCH=PX.indexOf("proxy?url=")>=0?20:5;
+var rowMap={};rows.forEach(function(r){rowMap[r.sid]=r;});
+for(var pi=0;pi<stocks.length;pi+=PBATCH){
+var pbatch=stocks.slice(pi,pi+PBATCH);
+var pp2=pbatch.map(function(s){
+var purl=FPRC+s.stock_id+"&start_date="+todayStr;
+return fetch(px(purl)).then(function(r){return r.json();}).catch(function(){return{status:0,data:[]};}).then(function(d){return{sid:s.stock_id,prc:d.status===200?(d.data||[]):[]}; });
+});
+var pResults=await Promise.all(pp2);
+for(var pr=0;pr<pResults.length;pr++){
+var prr=pResults[pr];
+var prcFiltered=prr.prc.filter(function(p){return p.close>0;});
+var lp2=prcFiltered.length?prcFiltered[prcFiltered.length-1]:null;
+if(!lp2)continue;
+var cl=parseFloat(lp2.close);
+var sp=lp2.spread!=null?parseFloat(lp2.spread):null;
+var pct2=(sp!=null)?((cl-sp)>0?parseFloat((sp/(cl-sp)*100).toFixed(2)):(sp===0?0:null)):null;
+var row=rowMap[prr.sid];
+if(row){row.close=cl;row.chg=sp;row.pct=pct2;}
+}
+var pdone=pi+pbatch.length;
+var ppct=70+Math.round(pdone/stocks.length*25);
+spg(ppct,"上櫃股價載入中 "+pdone+"/"+stocks.length);
+if(G.tab==="tpex")renderTable(getRows());
+if(pi+PBATCH<stocks.length)await new Promise(function(r){setTimeout(r,150);});
+}
+G.rows.tpex=rows;
 cpg("上櫃：共 "+rows.length+" 檔，資料月份："+dm);
-populateInd("tpex");
 renderTable(getRows());
 }
 
