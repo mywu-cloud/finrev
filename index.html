@@ -261,9 +261,7 @@ function reload(){G.rows[G.tab]=[];loadData();}
 
 function getTblData(){var rows=getRows();var h=COLS.map(function(c){return c.lb;});var d=rows.map(function(r,i){return[i+1,r.sid,r.name||"",r.ind||"",r.close!=null?parseFloat(r.close).toFixed(2):"",r.chg!=null?(r.chg>0?"+":"")+parseFloat(r.chg).toFixed(2):"",r.pct!=null?parseFloat(r.pct).toFixed(2)+"%":"",r.rev!=null?parseFloat(r.rev).toFixed(2):"",r.mom!=null?parseFloat(r.mom).toFixed(2)+"%":"",r.yoy!=null?parseFloat(r.yoy).toFixed(2)+"%":"",r.cum!=null?parseFloat(r.cum).toFixed(2):"",r.cumy!=null?parseFloat(r.cumy).toFixed(2)+"%":""];});return{h:h,d:d};}
 function escCSV(v){var s=String(v==null?"":v);return(s.indexOf(",")>=0||s.indexOf('"')>=0)?'"'+s.replace(/"/g,'""')+'"':s;}
-function dlCSV(){var td=getTblData(),csv="\uFEFF"+td.h.join(",")+"
-";td.d.forEach(function(row){csv+=row.map(escCSV).join(",")+"
-";});var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));a.download="台股月營收_"+(G.dm||"data")+".csv";a.click();}
+function dlCSV(){var td=getTblData(),csv="\uFEFF"+td.h.join(",")+"\n";td.d.forEach(function(row){csv+=row.map(escCSV).join(",")+"\n";});var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));a.download="台股月營收_"+(G.dm||"data")+".csv";a.click();}
 function dlXLS(){var td=getTblData();var x='<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n';x+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';x+='<Worksheet ss:Name="月營收"><Table>\n';[td.h].concat(td.d).forEach(function(row){x+="<Row>";row.forEach(function(v){var s=String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");x+='<Cell><Data ss:Type="String">'+s+"</Data></Cell>";});x+="</Row>\n";});x+="</Table></Worksheet></Workbook>";var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([x],{type:"application/vnd.ms-excel;charset=utf-8;"}));a.download="台股月營收_"+(G.dm||"data")+".xls";a.click();}
 
 var MO={row:null,yr:1,hist:[]};
