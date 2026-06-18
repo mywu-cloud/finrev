@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>台股月營收排行系统</title>
-<!-- v4.2: split rev/price fetch; price=30d, filter zero-close, pct shows 0.00% -->
+<!-- v4.3: TPEx price fetch top 300 by rev to avoid FinMind rate limit -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:14px;background:#f5f6f8;color:#222;min-height:100vh}
@@ -189,11 +189,13 @@ var priceDate=new Date(now.getTime()-30*86400000);
 var todayStr=priceDate.getFullYear()+"-"+String(priceDate.getMonth()+1).padStart(2,"0")+"-"+String(priceDate.getDate()).padStart(2,"0");
 var PBATCH=PX.indexOf("proxy?url=")>=0?20:5;
 var rowMap={};rows.forEach(function(r){rowMap[r.sid]=r;});
-for(var pi=0;pi<stocks.length;pi+=PBATCH){
-var pbatch=stocks.slice(pi,pi+PBATCH);
+var PMAX=300;
+var priceStocks=rows.slice().sort(function(a,b){return (b.rev||0)-(a.rev||0);}).slice(0,PMAX);
+for(var pi=0;pi<priceStocks.length;pi+=PBATCH){
+var pbatch=priceStocks.slice(pi,pi+PBATCH);
 var pp2=pbatch.map(function(s){
-var purl=FPRC+s.stock_id+"&start_date="+todayStr;
-return fetch(px(purl)).then(function(r){return r.json();}).catch(function(){return{status:0,data:[]};}).then(function(d){return{sid:s.stock_id,prc:d.status===200?(d.data||[]):[]}; });
+var purl=FPRC+s.sid+"&start_date="+todayStr;
+return fetch(px(purl)).then(function(r){return r.json();}).catch(function(){return{status:0,data:[]};}).then(function(d){return{sid:s.sid,prc:d.status===200?(d.data||[]):[]}; });
 });
 var pResults=await Promise.all(pp2);
 for(var pr=0;pr<pResults.length;pr++){
@@ -208,10 +210,9 @@ var row=rowMap[prr.sid];
 if(row){row.close=cl;row.chg=sp;row.pct=pct2;}
 }
 var pdone=pi+pbatch.length;
-var ppct=70+Math.round(pdone/stocks.length*25);
-spg(ppct,"上櫃股價載入中 "+pdone+"/"+stocks.length);
+spg(70+Math.round(pdone/PMAX*25),"上櫃股價載入中 "+pdone+"/"+PMAX);
 if(G.tab==="tpex")renderTable(getRows());
-if(pi+PBATCH<stocks.length)await new Promise(function(r){setTimeout(r,150);});
+if(pi+PBATCH<priceStocks.length)await new Promise(function(r){setTimeout(r,200);});
 }
 G.rows.tpex=rows;
 cpg("上櫃：共 "+rows.length+" 檔，資料月份："+dm);
