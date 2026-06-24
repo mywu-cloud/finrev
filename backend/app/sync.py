@@ -1,4 +1,4 @@
-TEST_CONTENT_123"""
+"""
 Data synchronisation helpers.
 Sources:
   - TWSE OpenAPI  (listed stocks + close price + change + industry)
