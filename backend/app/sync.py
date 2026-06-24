@@ -1,4 +1,4 @@
-"""
+TEST_CONTENT_123"""
 Data synchronisation helpers.
 Sources:
   - TWSE OpenAPI  (listed stocks + close price + change + industry)
@@ -6,11 +6,11 @@ Sources:
   - FinMind API   (TaiwanStockMonthRevenue)
 
 TWSE STOCK_DAY_ALL fields:
-  Code, Name, TradeVolume, TradeValue, OpeningPrice,
-  HighestPrice, LowestPrice, ClosingPrice, Change, Transaction
+    Code, Name, TradeVolume, TradeValue, OpeningPrice,
+    HighestPrice, LowestPrice, ClosingPrice, Change, Transaction
 
 TPEx tpex_mainboard_daily_close_quotes fields:
-  SecuritiesCompanyCode, CompanyName, Close, Change, ...
+    SecuritiesCompanyCode, CompanyName, Close, Change, ...
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ FINMIND_TOKEN = os.getenv("FINMIND_TOKEN", "")
 FINMIND_API = "https://api.finmindtrade.com/api/v4/data"
 
 # ---------------------------------------------------------------------------
-# TWSE industry code → Chinese name
+# TWSE industry code -> Chinese name
 # ---------------------------------------------------------------------------
 TWSE_INDUSTRY_MAP: Dict[str, str] = {
     "01": "水泥工業", "02": "食品工業", "03": "塑膠工業", "04": "紡織纖維",
@@ -58,12 +58,10 @@ def _parse_float(raw: object) -> Optional[float]:
     s = str(raw).replace(",", "").strip()
     if not s or s in ("--", "-", "N/A", ""):
         return None
-    # Keep leading + or - for change values
     try:
         return float(s)
     except ValueError:
         return None
-
 
 def _calc_change_pct(close: Optional[float], change: Optional[float]) -> Optional[float]:
     """change_pct = change / (close - change) * 100, rounded to 2dp."""
@@ -74,6 +72,11 @@ def _calc_change_pct(close: Optional[float], change: Optional[float]) -> Optiona
         return None
     return round(change / abs(prev) * 100, 2)
 
+def _today_str() -> str:
+    """Return today's date as YYYY-MM-DD in Taiwan time (UTC+8)."""
+    from datetime import timezone, timedelta
+    tz_tw = timezone(timedelta(hours=8))
+    return datetime.now(tz_tw).strftime("%Y-%m-%d")
 
 # ---------------------------------------------------------------------------
 # Industry mapping helpers
@@ -101,7 +104,6 @@ async def _fetch_twse_industry_map(client: httpx.AsyncClient) -> Dict[str, str]:
     except Exception as e:
         logger.warning("TWSE industry map error: %s", e)
         return {}
-
 
 async def _fetch_tpex_industry_map(client: httpx.AsyncClient) -> Dict[str, str]:
     result: Dict[str, str] = {}
@@ -134,7 +136,6 @@ async def _fetch_tpex_industry_map(client: httpx.AsyncClient) -> Dict[str, str]:
             logger.warning("TPEx industry endpoint %s error: %s", url, e)
     return result
 
-
 # ---------------------------------------------------------------------------
 # Stock list helpers
 # ---------------------------------------------------------------------------
@@ -144,16 +145,23 @@ async def _fetch_twse_stocks(
     industry_map: Dict[str, str],
 ) -> List[Dict]:
     """
-    TWSE STOCK_DAY_ALL fields:
-      Code, Name, ClosingPrice, Change (price change, may be '+15.00' or '-3.50')
-    change_pct is calculated: change / (close - change) * 100
+    TWSE STOCK_DAY_ALL: fetch close price, change, and derive price_date.
     """
     url = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
     try:
         r = await client.get(url, timeout=30)
         r.raise_for_status()
+        data = r.json()
+        # Try to get the trading date from first record or use today
+        price_date = _today_str()
+        if data and isinstance(data, list) and len(data) > 0:
+            first = data[0]
+            # TWSE may return Date field like "20260624"
+            raw_date = str(first.get("Date", "") or "").strip()
+            if len(raw_date) == 8 and raw_date.isdigit():
+                price_date = f"{raw_date[:4]}-{raw_date[4:6]}-{raw_date[6:8]}"
         stocks = []
-        for item in r.json():
+        for item in data:
             code = item.get("Code", "").strip()
             name = item.get("Name", "").strip()
             if not code or not name:
@@ -169,28 +177,40 @@ async def _fetch_twse_stocks(
                 "close_price": close,
                 "change": change,
                 "change_pct": change_pct,
+                "price_date": price_date,
             })
-        logger.info("TWSE: fetched %d stocks, sample: %s", len(stocks), stocks[:2])
+        logger.info("TWSE: fetched %d stocks, price_date=%s", len(stocks), price_date)
         return stocks
     except Exception as e:
         logger.error("TWSE fetch error: %s", e)
         return []
-
 
 async def _fetch_tpex_stocks(
     client: httpx.AsyncClient,
     industry_map: Dict[str, str],
 ) -> List[Dict]:
     """
-    TPEx tpex_mainboard_daily_close_quotes fields:
-      SecuritiesCompanyCode, CompanyName, Close, Change
+    TPEx tpex_mainboard_daily_close_quotes: fetch close price, change, derive price_date.
     """
     url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"
     try:
         r = await client.get(url, timeout=30)
         r.raise_for_status()
+        data = r.json()
+        price_date = _today_str()
+        if data and isinstance(data, list) and len(data) > 0:
+            first = data[0]
+            # TPEx may return Date like "114/06/24" (ROC year) or "2026/06/24"
+            raw_date = str(first.get("Date", "") or first.get("date", "") or "").strip()
+            if raw_date:
+                parts = raw_date.replace("-", "/").split("/")
+                if len(parts) == 3:
+                    y, m, d = parts[0], parts[1], parts[2]
+                    if len(y) <= 3:  # ROC year
+                        y = str(int(y) + 1911)
+                    price_date = f"{y}-{m.zfill(2)}-{d.zfill(2)}"
         stocks = []
-        for item in r.json():
+        for item in data:
             code = item.get("SecuritiesCompanyCode", "").strip()
             name = item.get("CompanyName", "").strip()
             if not code or not name:
@@ -211,13 +231,13 @@ async def _fetch_tpex_stocks(
                 "close_price": close,
                 "change": change,
                 "change_pct": change_pct,
+                "price_date": price_date,
             })
-        logger.info("TPEx: fetched %d stocks", len(stocks))
+        logger.info("TPEx: fetched %d stocks, price_date=%s", len(stocks), price_date)
         return stocks
     except Exception as e:
         logger.error("TPEx fetch error: %s", e)
         return []
-
 
 # ---------------------------------------------------------------------------
 # FinMind revenue helper
@@ -245,7 +265,6 @@ async def _fetch_finmind_revenue(
         logger.error("FinMind %s error: %s", stock_id, e)
         return []
 
-
 # ---------------------------------------------------------------------------
 # Database upsert helpers
 # ---------------------------------------------------------------------------
@@ -263,6 +282,7 @@ async def _upsert_stocks(stocks: List[Dict]) -> None:
             "close_price": s.get("close_price"),
             "change": s.get("change"),
             "change_pct": s.get("change_pct"),
+            "price_date": s.get("price_date"),
             "updated_at": now,
         }
         for s in stocks
@@ -277,6 +297,7 @@ async def _upsert_stocks(stocks: List[Dict]) -> None:
             "close_price": stmt.excluded.close_price,
             "change": stmt.excluded.change,
             "change_pct": stmt.excluded.change_pct,
+            "price_date": stmt.excluded.price_date,
             "updated_at": stmt.excluded.updated_at,
         },
     )
@@ -284,12 +305,10 @@ async def _upsert_stocks(stocks: List[Dict]) -> None:
         await conn.execute(stmt)
     logger.info("Upserted %d stocks", len(rows))
 
-
 def _calc_pct(new_val: Optional[int], old_val: Optional[int]) -> Optional[float]:
     if not new_val or not old_val:
         return None
     return round((new_val - old_val) / abs(old_val) * 100, 2)
-
 
 async def _upsert_revenues(rows: List[Dict]) -> None:
     if not rows:
@@ -339,7 +358,6 @@ async def _upsert_revenues(rows: List[Dict]) -> None:
     async with engine.begin() as conn:
         await conn.execute(stmt)
     logger.info("Upserted %d revenue rows for %s", len(db_rows), db_rows[0]["stock_id"])
-
 
 # ---------------------------------------------------------------------------
 # Main sync entry point
