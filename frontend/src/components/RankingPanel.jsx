@@ -7,7 +7,7 @@ const COLS = [
   { key: 'stock_id', label: '代碼', align: 'center' },
   { key: 'stock_name', label: '股票', align: 'left' },
   { key: 'industry', label: '產業', align: 'left' },
-  { key: 'close_price', label: '成交價', align: 'right' },
+  { key: 'close_price', label: '收盤價', align: 'right' },
   { key: 'revenue', label: '營收(千)', align: 'right' },
   { key: 'revenue_mom', label: '月增率%', align: 'right' },
   { key: 'revenue_yoy', label: '年增率%', align: 'right' },
@@ -83,6 +83,7 @@ export default function RankingPanel() {
           stock_name: s.stock_name,
           industry: s.industry || '--',
           close_price: s.close_price,
+          price_date: s.price_date,
           revenue: latest.revenue,
           revenue_mom: latest.revenue_mom,
           revenue_yoy: latest.revenue_yoy,
@@ -188,7 +189,11 @@ export default function RankingPanel() {
                   <td className={styles.td} style={{ textAlign: 'center' }}>{row.stock_id}</td>
                   <td className={styles.td} style={{ textAlign: 'left' }}>{row.stock_name}</td>
                   <td className={styles.td} style={{ textAlign: 'left' }}>{row.industry}</td>
-                  <td className={styles.td} style={{ textAlign: 'right' }}>{fmt(row.close_price)}</td>
+                  <td className={styles.td} style={{ textAlign: 'right' }}>
+                {row.price_date
+                  ? <><span style={{fontSize:'0.8em',color:'#94a3b8'}}>{row.price_date.substring(5).replace('-','/')}</span>{' '}{fmt(row.close_price)}</>
+                  : fmt(row.close_price)}
+              </td>
                   <td className={styles.td} style={{ textAlign: 'right' }}>{fmt(row.revenue, 0)}</td>
                   <td className={styles.td} style={{ textAlign: 'right', color: row.revenue_mom > 0 ? '#34d399' : row.revenue_mom < 0 ? '#f87171' : undefined }}>
                     {fmt(row.revenue_mom)}%
