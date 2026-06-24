@@ -103,6 +103,7 @@ def _stock_dict(s: Stock) -> dict:
         "close_price": s.close_price,
         "change": s.change,
         "change_pct": s.change_pct,
+        "price_date": s.price_date,
         "updated_at": s.updated_at,
     }
 
