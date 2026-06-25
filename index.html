@@ -120,9 +120,10 @@ spg(5,"取得上市公司月營收...");
 var r1=fetch(px(TREV)),r2=fetch(px(TPRC));
 var res1=await r1,res2=await r2;
 var revArr=await res1.json(),prcArr=await res2.json();
+var priceDate="";if(prcArr.length&&prcArr[0].Date){var _d=prcArr[0].Date;priceDate=_d.slice(4,6)+"/"+_d.slice(6,8);}
 spg(60,"解析上市公司資料...");
 var pm={};
-for(var i=0;i<prcArr.length;i++){var p2=prcArr[i];if(!ok4(p2.Code)||!okN(p2.Name||""))continue;var cl=pf(p2.ClosingPrice),ch=pf(p2.Change),cp=null;if(cl!=null&&ch!=null&&ch!==0){var pv=cl-ch;if(pv!==0)cp=parseFloat((ch/Math.abs(pv)*100).toFixed(2));}pm[p2.Code]={close:cl,chg:ch,pct:cp,priceDate:G_priceDate};}
+for(var i=0;i<prcArr.length;i++){var p2=prcArr[i];if(!ok4(p2.Code)||!okN(p2.Name||""))continue;var cl=pf(p2.ClosingPrice),ch=pf(p2.Change),cp=null;if(cl!=null&&ch!=null&&ch!==0){var pv=cl-ch;if(pv!==0)cp=parseFloat((ch/Math.abs(pv)*100).toFixed(2));}pm[p2.Code]={close:cl,chg:ch,pct:cp,priceDate:priceDate};}
 var dm="",rows=[];
 for(var j=0;j<revArr.length;j++){
 var it=revArr[j],code=(it[Object.keys(it)[2]]||"").trim(),name=(it[Object.keys(it)[3]]||"").trim();
@@ -139,7 +140,7 @@ else if(key.indexOf("產業別")>=0)ind=(val||"").trim();
 else if(key.indexOf("資料年月")>=0)ym=(val||"").trim();}
 if(rev==null)continue;if(ym&&!dm)dm=rocYM(ym);
 var pr=pm[code]||{};
-rows.push({sid:code,name:name,ind:ind,close:pr.close||null,chg:pr.chg||null,pct:pr.pct||null,priceDate:pr.priceDate||G_priceDate||"",rev:rev,mom:mom,yoy:yoy,cum:cum,cumy:cumy});}
+rows.push({sid:code,name:name,ind:ind,close:pr.close||null,chg:pr.chg||null,pct:pr.pct||null,priceDate:pr.priceDate||priceDate||"",rev:rev,mom:mom,yoy:yoy,cum:cum,cumy:cumy});}
 if(dm)G.dm=dm;
 G.rows.twse=rows;
 document.getElementById("hdrR").textContent="資料月份："+dm;
