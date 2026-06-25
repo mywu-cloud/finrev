@@ -1,0 +1,22 @@
+name: Update Stock Prices
+
+on:
+  schedule:
+    - cron: '0 11 * * *'   # 19:00 Taiwan time (UTC+8)
+    - cron: '0 12 * * *'   # 20:00 Taiwan time (UTC+8)
+  workflow_dispatch:         # Allow manual trigger
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger stock price sync
+        run: |
+          echo "Triggering stock price sync at $(TZ='Asia/Taipei' date)"
+          if [ -n "${{ secrets.BACKEND_URL }}" ]; then
+            curl -X POST "${{ secrets.BACKEND_URL }}/api/sync" \
+              -H "Content-Type: application/json" \
+              --fail --silent --show-error && echo "Sync completed successfully" || echo "Sync request failed"
+          else
+            echo "BACKEND_URL secret not set, skipping sync"
+          fi
