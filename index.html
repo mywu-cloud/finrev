@@ -82,11 +82,11 @@ tfoot td{background:#f0f2f7;font-weight:600;border-top:2px solid #dde1e7;font-si
 </style>
 </head>
 <body>
-<div class="hdr"><h1>&#128202; 台股月營收排行</h1><div class="hdr-r" id="hdrR">--</div><div class="toast" id="toast"></div></div>
+<div class="hdr"><h1>&#128202; 台股月營收排行</h1><div class="hdr-r" id="hdrR"></div><div class="toast" id="toast"></div></div>
 <div class="tabs"><button class="tab on" id="tb-twse" onclick="switchTab('twse')">上市 (TWSE)</button><button class="tab" id="tb-tpex" onclick="switchTab('tpex')">上櫃 (TPEx)</button><button class="tab" id="tb-watch" onclick="switchTab('watch')">&#11088; 自選股</button></div>
 <div class="tb" id="toolM"><label style="font-size:14px;color:#555;font-weight:500">產業：</label><select id="indS" onchange="onInd()"><option value="">全部產業</option></select><span class="sp"></span><button class="bt b2" onclick="dlCSV()">&#8595; CSV</button><button class="bt b2" onclick="dlXLS()">&#8595; XLS</button><button class="bt b1" onclick="reload()">&#128260; 重新載入</button></div>
 <div class="wt" id="toolW" style="display:none"><input id="wI" type="text" placeholder="股票代號（4碼）" maxlength="6" onkeydown="if(event.key==='Enter')addW()"><button class="bt b3" onclick="addW()">&#65291; 新增</button><span class="sp"></span><button class="bt b2" onclick="dlCSV()">&#8595; CSV</button><button class="bt b2" onclick="dlXLS()">&#8595; XLS</button><button class="bt b4 b5" onclick="clrW()">全部清除</button></div>
-<div class="fr" id="toolF"><label>篩選條件：</label><label>月營收(億)≥</label><input id="fRev" type="number" step="0.01" placeholder="不限" oninput="onFilt()"><span class="frsep">|</span><label>月增率≥</label><input id="fMom" type="number" step="0.01" placeholder="不限" oninput="onFilt()"><label>%</label><span class="frsep">|</span><label>年增率≥</label><input id="fYoy" type="number" step="0.01" placeholder="不限" oninput="onFilt()"><label>%</label><span class="frsep">|</span><label>累計年增率≥</label><input id="fCumy" type="number" step="0.01" placeholder="不限" oninput="onFilt()"><label>%</label><span class="frsep">|</span><button class="bt b2" style="height:28px;font-size:12px;padding:2px 10px" onclick="clrFilt()">清除篩選</button></div>
+<div class="fr" id="toolF"><label>篩選條件：</label><label id="baseYmLbl"></label><span class="frsep">|</span><label>月營收(億)≥</label><input id="fRev" type="number" step="0.01" placeholder="不限" oninput="onFilt()"><span class="frsep">|</span><label>月增率≥</label><input id="fMom" type="number" step="0.01" placeholder="不限" oninput="onFilt()"><label>%</label><span class="frsep">|</span><label>年增率≥</label><input id="fYoy" type="number" step="0.01" placeholder="不限" oninput="onFilt()"><label>%</label><span class="frsep">|</span><label>累計年增率≥</label><input id="fCumy" type="number" step="0.01" placeholder="不限" oninput="onFilt()"><label>%</label><span class="frsep">|</span><button class="bt b2" style="height:28px;font-size:12px;padding:2px 10px" onclick="clrFilt()">清除篩選</button></div>
 <div class="pg" id="pg"><div class="pgb" id="pgb"></div></div>
 <div class="st" id="st">初始化中...</div>
 <div class="tw"><table><thead id="th"></thead><tbody id="tb"></tbody><tfoot id="tf"></tfoot></table></div>
@@ -125,7 +125,7 @@ G.priceDate=priceDate;
 spg(60,"解析上市公司資料...");
 var pm={};
 for(var i=0;i<prcArr.length;i++){var p2=prcArr[i];if(!ok4(p2.Code)||!okN(p2.Name||""))continue;var cl=pf(p2.ClosingPrice),ch=pf(p2.Change),cp=null;if(cl!=null&&ch!=null&&ch!==0){var pv=cl-ch;if(pv!==0)cp=parseFloat((ch/Math.abs(pv)*100).toFixed(2));}pm[p2.Code]={close:cl,chg:ch,pct:cp,priceDate:priceDate};}
-var dm="",dmNum=0,rows=[];
+var dm="",dmNum=0,rows=[],freqYm={};
 for(var j=0;j<revArr.length;j++){
 var it=revArr[j],code=(it[Object.keys(it)[2]]||"").trim(),name=(it[Object.keys(it)[3]]||"").trim();
 if(!ok4(code)||!okN(name))continue;
@@ -139,13 +139,13 @@ else if(key.indexOf("當月累計")>=0){var _c=pf(val);cum=_c!=null?_c/1e5:null;
 else if(key.indexOf("前期比較")>=0)cumy=pf(val);
 else if(key.indexOf("產業別")>=0)ind=(val||"").trim();
 else if(key.indexOf("資料年月")>=0)ym=(val||"").trim();}
-if(rev==null)continue;if(ym&&!dm)dm=rocYM(ym);var _ymN=ymNumRoc(ym);if(_ymN&&(!dmNum||_ymN<dmNum))dmNum=_ymN;
+if(rev==null)continue;var _ymN=ymNumRoc(ym);if(_ymN)freqYm[_ymN]=(freqYm[_ymN]||0)+1;
 var pr=pm[code]||{};
 rows.push({sid:code,name:name,ind:ind,close:pr.close||null,chg:pr.chg||null,pct:pr.pct||null,priceDate:pr.priceDate||priceDate||"",rev:rev,mom:mom,yoy:yoy,cum:cum,cumy:cumy,ymNum:ymNumRoc(ym)});}
 if(dm)G.dm=dm;
-if(dmNum)G.dmNumMap.twse=dmNum;G.rows.twse=rows;
-document.getElementById("hdrR").textContent="資料月份："+dm;
-cpg("上市：共 "+rows.length+" 檔，資料月份："+dm);
+var _bestW=0;for(var fkw in freqYm){var _yw=parseInt(fkw);if(rows.length&&(freqYm[fkw]/rows.length)>=0.3&&_yw>_bestW)_bestW=_yw;}if(_bestW)dmNum=_bestW;if(dmNum){dm=Math.floor(dmNum/100)+"年"+(dmNum%100)+"月";G.dm=dm;}if(dmNum)G.dmNumMap.twse=dmNum;G.rows.twse=rows;
+
+document.getElementById("baseYmLbl").textContent="篩選基準月份："+dm;cpg("上市：共 "+rows.length+" 檔");
 populateInd("twse");populateYm("twse");if(rows.length)checkTwseFresh();
 renderTable(getRows());
 }
@@ -190,9 +190,9 @@ if(i+BATCH<stocks.length)await new Promise(function(r){setTimeout(r,300);});
 }
 if(dm)G.dm=dm;
 G.rows.tpex=rows;
-document.getElementById("hdrR").textContent="資料月份："+dm;
+
 populateInd("tpex");populateYm("tpex");renderTable(getRows());
-cpg("上櫃：共 "+rows.length+" 檔，資料月份："+dm+"（載入股價中...）");
+cpg("上櫃：共 "+rows.length+" 檔（載入股價中...）");
 var priceDate=new Date(now.getTime()-30*86400000);
 var todayStr=priceDate.getFullYear()+"-"+String(priceDate.getMonth()+1).padStart(2,"0")+"-"+String(priceDate.getDate()).padStart(2,"0");
 var PBATCH=PX.indexOf("proxy?url=")>=0?20:5;
@@ -223,7 +223,7 @@ if(G.tab==="tpex")renderTable(getRows());
 if(pi+PBATCH<priceStocks.length)await new Promise(function(r){setTimeout(r,200);});
 }
 G.rows.tpex=rows;
-var freqT={};for(var fi=0;fi<rows.length;fi++){var fy=rows[fi].ymNum;if(fy)freqT[fy]=(freqT[fy]||0)+1;}var baseYmT=G.dmNumMap.twse||0;if(!baseYmT){var maxCntT=-1;for(var fk in freqT){if(freqT[fk]>maxCntT){maxCntT=freqT[fk];baseYmT=parseInt(fk);}}}if(baseYmT){G.dmNumMap.tpex=baseYmT;dm=Math.floor(baseYmT/100)+"年"+(baseYmT%100)+"月";G.dm=dm;var targetYmT=incYm(baseYmT);for(var ri=0;ri<rows.length;ri++){var rmap=rawMap[rows[ri].sid];var baseST=rmap?statsAt(rmap,baseYmT):null;if(baseST){rows[ri].rev=baseST.rev;rows[ri].mom=baseST.mom;rows[ri].yoy=baseST.yoy;rows[ri].cum=baseST.cum;rows[ri].cumy=baseST.cumy;}else{rows[ri].rev=null;rows[ri].mom=null;rows[ri].yoy=null;rows[ri].cum=null;rows[ri].cumy=null;}var nextST=rmap?statsAt(rmap,targetYmT):null;if(nextST){rows[ri].revNext=nextST.rev;rows[ri].mom=nextST.mom;rows[ri].yoy=nextST.yoy;rows[ri].cum=nextST.cum;rows[ri].cumy=nextST.cumy;}}document.getElementById("hdrR").textContent="資料月份："+dm;}cpg("上櫃：共 "+rows.length+" 檔，資料月份："+dm);
+var freqT={};for(var fi=0;fi<rows.length;fi++){var fy=rows[fi].ymNum;if(fy)freqT[fy]=(freqT[fy]||0)+1;}var baseYmT=G.dmNumMap.twse||0;if(!baseYmT){var _bestT=0;for(var fk in freqT){var _yt=parseInt(fk);if(rows.length&&(freqT[fk]/rows.length)>=0.3&&_yt>_bestT)_bestT=_yt;}if(_bestT)baseYmT=_bestT;}if(baseYmT){G.dmNumMap.tpex=baseYmT;dm=Math.floor(baseYmT/100)+"年"+(baseYmT%100)+"月";G.dm=dm;var targetYmT=incYm(baseYmT);for(var ri=0;ri<rows.length;ri++){var rmap=rawMap[rows[ri].sid];var baseST=rmap?statsAt(rmap,baseYmT):null;if(baseST){rows[ri].rev=baseST.rev;rows[ri].mom=baseST.mom;rows[ri].yoy=baseST.yoy;rows[ri].cum=baseST.cum;rows[ri].cumy=baseST.cumy;}else{rows[ri].rev=null;rows[ri].mom=null;rows[ri].yoy=null;rows[ri].cum=null;rows[ri].cumy=null;}var nextST=rmap?statsAt(rmap,targetYmT):null;if(nextST){rows[ri].revNext=nextST.rev;rows[ri].mom=nextST.mom;rows[ri].yoy=nextST.yoy;rows[ri].cum=nextST.cum;rows[ri].cumy=nextST.cumy;}}}document.getElementById("baseYmLbl").textContent="篩選基準月份："+dm;cpg("上櫃：共 "+rows.length+" 檔");
 renderTable(getRows());
 }
 
@@ -232,11 +232,11 @@ var ids=G.wl;
 if(!ids.length){G.rows.watch=[];renderTable([]);cpg("自選股：尚未新增股票");return;}
 spg(5,"取得自選股資料...");
 var now=new Date(),startDate=(now.getFullYear()-1)+"-01-01";
-var twseRevMap={},twsePrcMap={},tpexInfo={},dmNum2=0;
+var twseRevMap={},twsePrcMap={},tpexInfo={},dmNum2=0,freqYm2={};
 try{
 var r1=await fetch(px(TREV)),r2=await fetch(px(TPRC)),r3=await fetch(px(FINFO));
 var d1=await r1.json(),d2=await r2.json(),d3=await r3.json();
-for(var i=0;i<d1.length;i++){var it=d1[i],keys=Object.keys(it),code=(it[keys[2]]||"").trim();if(!ok4(code))continue;var rev=null,mom=null,yoy=null,cum=null,cumy=null,ind="",nm="",ym="";for(var k=0;k<keys.length;k++){var key=keys[k],val=it[key];if(key.indexOf("當月營收")>=0&&key.indexOf("累計")<0&&key.indexOf("去年")<0){var _wr=pf(val);rev=_wr!=null?_wr/1e5:null;}else if(key.indexOf("上月比較")>=0)mom=pf(val);else if(key.indexOf("去年同月")>=0)yoy=pf(val);else if(key.indexOf("當月累計")>=0){var _wc=pf(val);cum=_wc!=null?_wc/1e5:null;}else if(key.indexOf("前期比較")>=0)cumy=pf(val);else if(key.indexOf("產業別")>=0)ind=(val||"").trim();else if(key.indexOf("公司名稱")>=0)nm=(val||"").trim();else if(key.indexOf("資料年月")>=0)ym=(val||"").trim();}twseRevMap[code]={rev:rev,mom:mom,yoy:yoy,cum:cum,cumy:cumy,ind:ind,name:nm,ymNum:ymNumRoc(ym)};var _yn2=ymNumRoc(ym);if(_yn2&&(!dmNum2||_yn2<dmNum2))dmNum2=_yn2;}
+for(var i=0;i<d1.length;i++){var it=d1[i],keys=Object.keys(it),code=(it[keys[2]]||"").trim();if(!ok4(code))continue;var rev=null,mom=null,yoy=null,cum=null,cumy=null,ind="",nm="",ym="";for(var k=0;k<keys.length;k++){var key=keys[k],val=it[key];if(key.indexOf("當月營收")>=0&&key.indexOf("累計")<0&&key.indexOf("去年")<0){var _wr=pf(val);rev=_wr!=null?_wr/1e5:null;}else if(key.indexOf("上月比較")>=0)mom=pf(val);else if(key.indexOf("去年同月")>=0)yoy=pf(val);else if(key.indexOf("當月累計")>=0){var _wc=pf(val);cum=_wc!=null?_wc/1e5:null;}else if(key.indexOf("前期比較")>=0)cumy=pf(val);else if(key.indexOf("產業別")>=0)ind=(val||"").trim();else if(key.indexOf("公司名稱")>=0)nm=(val||"").trim();else if(key.indexOf("資料年月")>=0)ym=(val||"").trim();}twseRevMap[code]={rev:rev,mom:mom,yoy:yoy,cum:cum,cumy:cumy,ind:ind,name:nm,ymNum:ymNumRoc(ym)};var _yn2=ymNumRoc(ym);if(_yn2)freqYm2[_yn2]=(freqYm2[_yn2]||0)+1;}
 for(var j=0;j<d2.length;j++){var p2=d2[j];if(!ok4(p2.Code))continue;var cl=pf(p2.ClosingPrice),ch=pf(p2.Change),cp2=null;if(cl!=null&&ch!=null&&ch!==0){var pv=cl-ch;if(pv!==0)cp2=parseFloat((ch/Math.abs(pv)*100).toFixed(2));}twsePrcMap[p2.Code]={close:cl,chg:ch,pct:cp2};}
 (d3.data||[]).forEach(function(s){if(ok4(s.stock_id))tpexInfo[s.stock_id]=s;});
 }catch(e){}
@@ -264,10 +264,10 @@ var ch2=sp3,pct3=(cl2!=null&&sp3!=null)?((cl2-sp3)>0?parseFloat((sp3/(cl2-sp3)*1
 return{sid:id,name:si?si.stock_name:id,ind:si?si.industry_category:"",close:cl2,chg:ch2,pct:pct3,rev:rv2!=null?rv2/1e8:null,mom:mom2,yoy:yoy2,cum:cm2?cm2/1e8:null,cumy:cumy2,ymNum:y2*100+m3};
 }).catch(function(){return{sid:id,name:si?si.stock_name:id,ind:"",close:null,chg:null,pct:null,rev:null,mom:null,yoy:null,cum:null,cumy:null};});
 });
-var rows=await Promise.all(pArr);var targetYmW=incYm(dmNum2);if(dmNum2){G.dmNumMap.watch=dmNum2;var dmStrW=Math.floor(dmNum2/100)+"年"+(dmNum2%100)+"月";G.dm=dmStrW;document.getElementById("hdrR").textContent="資料月份："+dmStrW;await Promise.all(rows.map(function(rw){var wurl=FREV+rw.sid+"&start_date="+startDate;return fetch(px(wurl)).then(function(r){return r.json();}).then(function(dw){var arrw=(dw.data||[]).slice().sort(function(a,b){return a.revenue_year!==b.revenue_year?a.revenue_year-b.revenue_year:a.revenue_month-b.revenue_month;});var mapw={};arrw.forEach(function(x){mapw[x.revenue_year+"_"+x.revenue_month]=x.revenue;});var baseSW=statsAt(mapw,dmNum2);if(baseSW){rw.rev=baseSW.rev;rw.mom=baseSW.mom;rw.yoy=baseSW.yoy;rw.cum=baseSW.cum;rw.cumy=baseSW.cumy;}var nextSW=statsAt(mapw,targetYmW);if(nextSW){rw.revNext=nextSW.rev;rw.mom=nextSW.mom;rw.yoy=nextSW.yoy;rw.cum=nextSW.cum;rw.cumy=nextSW.cumy;}}).catch(function(){});}));}
+var rows=await Promise.all(pArr);dmNum2=G.dmNumMap.twse||0;if(!dmNum2){var _best2=0;var _nTot2=Object.keys(twseRevMap).length;for(var fk2 in freqYm2){var _y2=parseInt(fk2);if(_nTot2&&(freqYm2[fk2]/_nTot2)>=0.3&&_y2>_best2)_best2=_y2;}if(_best2)dmNum2=_best2;}var targetYmW=incYm(dmNum2);if(dmNum2){G.dmNumMap.watch=dmNum2;var dmStrW=Math.floor(dmNum2/100)+"年"+(dmNum2%100)+"月";G.dm=dmStrW;document.getElementById("baseYmLbl").textContent="篩選基準月份："+dmStrW;await Promise.all(rows.map(function(rw){var wurl=FREV+rw.sid+"&start_date="+startDate;return fetch(px(wurl)).then(function(r){return r.json();}).then(function(dw){var arrw=(dw.data||[]).slice().sort(function(a,b){return a.revenue_year!==b.revenue_year?a.revenue_year-b.revenue_year:a.revenue_month-b.revenue_month;});var mapw={};arrw.forEach(function(x){mapw[x.revenue_year+"_"+x.revenue_month]=x.revenue;});var baseSW=statsAt(mapw,dmNum2);if(baseSW){rw.rev=baseSW.rev;rw.mom=baseSW.mom;rw.yoy=baseSW.yoy;rw.cum=baseSW.cum;rw.cumy=baseSW.cumy;}var nextSW=statsAt(mapw,targetYmW);if(nextSW){rw.revNext=nextSW.rev;rw.mom=nextSW.mom;rw.yoy=nextSW.yoy;rw.cum=nextSW.cum;rw.cumy=nextSW.cumy;}}).catch(function(){});}));}
 G.rows.watch=rows;
 renderTable(getRows());
-cpg("自選股："+rows.length+" 支，資料月份："+G.dm);
+cpg("自選股："+rows.length+" 支");
 }
 function saveW(){localStorage.setItem("_tw_w",JSON.stringify(G.wl));}
 function addW(){var inp=document.getElementById("wI"),code=inp.value.trim().toUpperCase();inp.value="";if(!code)return;if(!ok4(code)){alert("請輸入4碼數字股票代號");return;}if(G.wl.indexOf(code)>=0){alert(code+" 已在自選股");return;}G.wl.push(code);saveW();if(G.tab==="watch")loadWatch();}
