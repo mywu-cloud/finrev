@@ -1,0 +1,44 @@
+name: Update Revenue Cache
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '忽略平日與日期(5-10日)限制，強制執行'
+        required: false
+        default: 'false'
+  schedule:
+    - cron: '0 1 5-10 * *'
+    - cron: '0 13 5-10 * *'
+
+jobs:
+  fetch-revenue:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch revenue data from FinMind
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+          FORCE_RUN: ${{ github.event.inputs.force }}
+        run: node scripts/fetch-revenue.js
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/revenue-twse.json data/revenue-tpex.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update revenue cache $(TZ='Asia/Taipei' date '+%Y-%m-%d %H:%M %Z')"
+            git push
+          fi
