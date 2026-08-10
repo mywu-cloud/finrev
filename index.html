@@ -183,6 +183,7 @@ if(infoData.status===402){serr("上櫃：FinMind API 請求已達上限，請稍
 var seenIds={};
 stocks=stocks.filter(function(s){if(seenIds[s.stock_id])return false;seenIds[s.stock_id]=true;return true;});
 spg(10,"取得 "+stocks.length+" 支上櫃股票，載入月營收...");
+var now=new Date();
 spg(10,"讀取上櫃月營收快取（共 "+stocks.length+" 檔）...");
 var revCache=null;
 try{var cacheRes=await fetch("data/revenue-tpex.json?d="+Math.floor(Date.now()/3600000));if(cacheRes.ok)revCache=await cacheRes.json();}catch(eCache){}
