@@ -38,7 +38,7 @@ function targetMonth() {
   const m = now.getUTCMonth() + 1;
   const d = now.getUTCDate();
   let ty = y, tm;
-  if (d > 10) { tm = m; } else { tm = m - 1; }
+  if (d > 15) { tm = m; } else { tm = m - 1; }
   if (tm <= 0) { tm += 12; ty -= 1; }
   return ty * 100 + tm;
 }
@@ -130,7 +130,7 @@ async function main() {
   if (!force) {
     if (!isTaipeiWeekday()) { console.log('Not a Taipei weekday, skipping run.'); return; }
     const day = new Date(Date.now() + 8 * 3600 * 1000).getUTCDate();
-    if (day < 5 || day > 10) { console.log('Outside day 5-10 window (day=' + day + '), skipping run.'); return; }
+    if (day < 5 || day > 15) { console.log('Outside day 5-15 window (day=' + day + '), skipping run.'); return; }
   }
 
   const { twse, tpex } = await fetchStockList();
