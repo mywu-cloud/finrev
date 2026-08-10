@@ -150,28 +150,53 @@ populateInd("twse");populateYm("twse");if(rows.length)checkTwseFresh();
 renderTable(getRows());
 }
 
-async function checkTwseFresh(){var rows2=G.rows.twse;if(!rows2.length)return;var top=rows2.slice().sort(function(a,b){return (b.rev||0)-(a.rev||0);});var now2=new Date(),sd2=(now2.getFullYear()-1)+"-01-01";var BATCH2=PX.indexOf("proxy?url=")>=0?20:5;var targetYm=incYm(G.dmNumMap.twse);for(var i2=0;i2<top.length;i2+=BATCH2){var batch2=top.slice(i2,i2+BATCH2);var proms=batch2.map(function(r){var url2=FREV+r.sid+"&start_date="+sd2;return fetch(px(url2)).then(function(rs){return rs.json();}).catch(function(){return{status:0,data:[]};}).then(function(d){return{r:r,arr:d.status===200?(d.data||[]):[]};});});var results=await Promise.all(proms);for(var j2=0;j2<results.length;j2++){var rr=results[j2],arr=rr.arr;if(!arr.length)continue;var map2={};for(var m4=0;m4<arr.length;m4++){map2[arr[m4].revenue_year+"_"+arr[m4].revenue_month]=arr[m4].revenue;}var ty=Math.floor(targetYm/100),tm=targetYm%100;var rawNext=map2[ty+"_"+tm];if(rawNext==null)continue;rr.r.revNext=rawNext/1e8;var pmRaw2=tm>1?map2[ty+"_"+(tm-1)]:map2[(ty-1)+"_12"];rr.r.mom=pmRaw2!=null?parseFloat(((rawNext-pmRaw2)/Math.abs(pmRaw2)*100).toFixed(2)):null;var pyRaw2=map2[(ty-1)+"_"+tm];rr.r.yoy=pyRaw2!=null?parseFloat(((rawNext-pyRaw2)/Math.abs(pyRaw2)*100).toFixed(2)):null;var cumN=0,cumOk=true;for(var c3=1;c3<=tm;c3++){var cv4=map2[ty+"_"+c3];if(cv4==null){cumOk=false;break;}cumN+=cv4;}var cumP=0,cumPOk=true;for(var c4=1;c4<=tm;c4++){var cv5=map2[(ty-1)+"_"+c4];if(cv5==null){cumPOk=false;break;}cumP+=cv5;}if(cumOk)rr.r.cum=cumN/1e8;rr.r.cumy=(cumOk&&cumPOk&&cumP)?parseFloat(((cumN-cumP)/Math.abs(cumP)*100).toFixed(2)):null;}if(G.tab==="twse")renderTable(getRows());else if(G.tab==="early1"||G.tab==="early2")renderEarly();if(i2+BATCH2<top.length)await new Promise(function(res){setTimeout(res,150);});}}async function loadTPEx(){
+async function checkTwseFresh(){
+var rows2=G.rows.twse;
+if(!rows2.length)return;
+var targetYm=incYm(G.dmNumMap.twse);
+var ty=Math.floor(targetYm/100),tm=targetYm%100;
+var revCache=null;
+try{var cacheRes=await fetch("data/revenue-twse.json?d="+Math.floor(Date.now()/3600000));if(cacheRes.ok)revCache=await cacheRes.json();}catch(eCache){}
+if(!revCache||!revCache.stocks)return;
+for(var j2=0;j2<rows2.length;j2++){
+var rr=rows2[j2];
+var entry=revCache.stocks[rr.sid];
+if(!entry||!entry.months)continue;
+var map2=entry.months;
+var rawNext=map2[ty+"_"+tm];
+if(rawNext==null)continue;
+rr.revNext=rawNext/1e8;
+var pmRaw2=tm>1?map2[ty+"_"+(tm-1)]:map2[(ty-1)+"_12"];
+rr.mom=pmRaw2!=null?parseFloat(((rawNext-pmRaw2)/Math.abs(pmRaw2)*100).toFixed(2)):null;
+var pyRaw2=map2[(ty-1)+"_"+tm];
+rr.yoy=pyRaw2!=null?parseFloat(((rawNext-pyRaw2)/Math.abs(pyRaw2)*100).toFixed(2)):null;
+var cumN=0,cumOk=true;for(var c3=1;c3<=tm;c3++){var cv4=map2[ty+"_"+c3];if(cv4==null){cumOk=false;break;}cumN+=cv4;}
+var cumP=0,cumPOk=true;for(var c4=1;c4<=tm;c4++){var cv5=map2[(ty-1)+"_"+c4];if(cv5==null){cumPOk=false;break;}cumP+=cv5;}
+if(cumOk)rr.cum=cumN/1e8;
+rr.cumy=(cumOk&&cumPOk&&cumP)?parseFloat(((cumN-cumP)/Math.abs(cumP)*100).toFixed(2)):null;
+}
+if(G.tab==="twse")renderTable(getRows());else if(G.tab==="early1"||G.tab==="early2")renderEarly();
+}async function loadTPEx(){
 spg(5,"取得上櫃股票清單...");
 var infoRes=await fetch(px(FINFO)),infoData=await infoRes.json();
 if(infoData.status===402){serr("上櫃：FinMind API 請求已達上限，請稍候再試(免費版限制)");return;}var stocks=(infoData.data||[]).filter(function(s){return ok4(s.stock_id)&&okN(s.stock_name||"")&&s.type==="tpex";});
 var seenIds={};
 stocks=stocks.filter(function(s){if(seenIds[s.stock_id])return false;seenIds[s.stock_id]=true;return true;});
 spg(10,"取得 "+stocks.length+" 支上櫃股票，載入月營收...");
-var now=new Date(),startDate=(now.getFullYear()-1)+"-01-01";
-var BATCH=PX.indexOf("proxy?url=")>=0?15:5,rows=[],dm="",rawMap={};
-for(var i=0;i<stocks.length;i+=BATCH){
-var batch=stocks.slice(i,i+BATCH);
-var promises=batch.map(function(s){
-var rurl=FREV+s.stock_id+"&start_date="+startDate;
-return fetch(px(rurl)).then(function(r){return r.json();}).catch(function(){return{status:0,data:[]};}).then(function(d){return{s:s,arr:d.status===200?(d.data||[]):[]}; });
-});
-var batchR=await Promise.all(promises);
-for(var b=0;b<batchR.length;b++){
-var rs=batchR[b];if(!rs.arr.length)continue;
-var arr=rs.arr.slice().sort(function(a,b2){return a.revenue_year!==b2.revenue_year?a.revenue_year-b2.revenue_year:a.revenue_month-b2.revenue_month;});
-var map={};for(var m2=0;m2<arr.length;m2++){map[arr[m2].revenue_year+"_"+arr[m2].revenue_month]=arr[m2].revenue;}rawMap[rs.s.stock_id]=map;
-var last=arr[arr.length-1],y=last.revenue_year,mo=last.revenue_month;
-var rawRev=last.revenue,rev=rawRev/1e8;
+spg(10,"讀取上櫃月營收快取（共 "+stocks.length+" 檔）...");
+var revCache=null;
+try{var cacheRes=await fetch("data/revenue-tpex.json?d="+Math.floor(Date.now()/3600000));if(cacheRes.ok)revCache=await cacheRes.json();}catch(eCache){}
+var rows=[],dm="",rawMap={};
+for(var i=0;i<stocks.length;i++){
+var s=stocks[i];
+var entry=revCache&&revCache.stocks?revCache.stocks[s.stock_id]:null;
+if(!entry||!entry.months)continue;
+var map=entry.months;
+var ymKeys=Object.keys(map).map(function(k){var p=k.split("_");return parseInt(p[0],10)*100+parseInt(p[1],10);}).sort(function(a,b){return a-b;});
+if(!ymKeys.length)continue;
+rawMap[s.stock_id]=map;
+var lastYm=ymKeys[ymKeys.length-1],y=Math.floor(lastYm/100),mo=lastYm%100;
+var rawRev=map[y+"_"+mo],rev=rawRev/1e8;
 var pmRaw=mo>1?map[y+"_"+(mo-1)]:map[(y-1)+"_12"];
 var mom=pmRaw!=null?parseFloat(((rawRev-pmRaw)/Math.abs(pmRaw)*100).toFixed(2)):null;
 var pyRaw=map[(y-1)+"_"+mo];
@@ -180,17 +205,10 @@ var cum=0;for(var c=1;c<=mo;c++){var cv=map[y+"_"+c];if(cv)cum+=cv;}
 var cpv=0;for(var c2=1;c2<=mo;c2++){var cpvv=map[(y-1)+"_"+c2];if(cpvv)cpv+=cpvv;}
 var cumy=cpv?parseFloat(((cum-cpv)/Math.abs(cpv)*100).toFixed(2)):null;
 if(!dm)dm=y+"年"+mo+"月";
-rows.push({sid:rs.s.stock_id,name:rs.s.stock_name,ind:rs.s.industry_category||"",close:null,chg:null,pct:null,rev:rev,mom:mom,yoy:yoy,cum:cum?cum/1e8:null,cumy:cumy,ymNum:y*100+mo});
-}
-var done=i+batch.length;
-var pct=10+Math.round(done/stocks.length*60);
-spg(pct,"上櫃營收載入中 "+done+"/"+stocks.length+"，已有 "+rows.length+" 筆");
-if(rows.length&&done%150===0){G.rows.tpex=rows.slice();if(G.tab==="tpex"){populateInd("tpex");populateYm("tpex");renderTable(getRows());}}
-if(i+BATCH<stocks.length)await new Promise(function(r){setTimeout(r,300);});
+rows.push({sid:s.stock_id,name:s.stock_name,ind:s.industry_category||"",close:null,chg:null,pct:null,rev:rev,mom:mom,yoy:yoy,cum:cum?cum/1e8:null,cumy:cumy,ymNum:y*100+mo});
 }
 if(dm)G.dm=dm;
 G.rows.tpex=rows;
-
 populateInd("tpex");populateYm("tpex");renderTable(getRows());
 cpg("上櫃：共 "+rows.length+" 檔（載入股價中...）");
 var priceDate=new Date(now.getTime()-30*86400000);
