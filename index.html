@@ -95,6 +95,7 @@ tfoot td{background:#f0f2f7;font-weight:600;border-top:2px solid #dde1e7;font-si
 var PX=location.hostname.indexOf("pages.dev")>=0?"/api/proxy?url=":"https://corsproxy.io/?url=";
 var TREV="https://openapi.twse.com.tw/v1/opendata/t187ap05_L";
 var TPRC="https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL";
+var MIIDX="https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX";
 var FINFO="https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInfo";
 var FREV="https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMonthRevenue&data_id=";
 var FPRC="https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=";
@@ -106,6 +107,9 @@ function px(u){return PX+encodeURIComponent(u);}
 function ok4(c){return /^[1-9][0-9]{3}$/.test(c);}
 function okN(n){for(var i=0;i<BAD.length;i++){if(n.indexOf(BAD[i])>=0)return false;}return true;}
 function pf(v){if(v==null||v==="")return null;var n=parseFloat(String(v).replace(/,/g,""));return isNaN(n)?null:n;}
+function twDateParts(off){var d=new Date(Date.now()+8*3600*1000-off*86400000);var y=d.getUTCFullYear(),m=String(d.getUTCMonth()+1).padStart(2,"0"),day=String(d.getUTCDate()).padStart(2,"0");return{ymd:y+m+day,roc:(y-1911)+m+day};}
+function miParsePrice(json){var t=(json.tables||[]).find(function(tb){return tb.fields&&tb.fields.indexOf("證券代號")>=0;});if(!t||!t.data||!t.data.length)return null;var rocDate=json.date?(parseInt(json.date.slice(0,4),10)-1911)+json.date.slice(4,8):"";var out=[];for(var i=0;i<t.data.length;i++){var row=t.data[i],dir=row[9]||"",sign=dir.indexOf("green")>=0?-1:dir.indexOf("red")>=0?1:0,mag=pf(row[10]);out.push({Date:rocDate,Code:row[0],Name:row[1],ClosingPrice:row[8],Change:mag!=null?sign*mag:0});}return out;}
+async function fetchPriceArr(){for(var off=0;off<6;off++){try{var d=twDateParts(off);var res=await fetch(px(MIIDX+"?response=json&type=ALLBUT0999&date="+d.ymd));var j=await res.json();if(j.stat!=="OK")continue;var arr=miParsePrice(j);if(arr&&arr.length)return arr;}catch(e){}}try{var res2=await fetch(px(TPRC));return await res2.json();}catch(e2){return[];}}
 function f2(v){if(v==null)return"--";return parseFloat(v).toLocaleString("zh-TW",{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fr(v){if(v==null)return"--";return parseFloat(v).toLocaleString("zh-TW",{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fp(v){if(v==null)return"--";var n=parseFloat(v);return(n>0?"+":"")+n.toLocaleString("zh-TW",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";}
@@ -117,9 +121,9 @@ function serr(msg){document.getElementById("pg").style.display="none";var s=docu
 
 async function loadTWSE(){
 spg(5,"取得上市公司月營收...");
-var r1=fetch(px(TREV)),r2=fetch(px(TPRC));
-var res1=await r1,res2=await r2;
-var revArr=await res1.json(),prcArr=await res2.json();
+var r1=fetch(px(TREV)),r2p=fetchPriceArr();
+var res1=await r1;
+var revArr=await res1.json(),prcArr=await r2p;
 var priceDate="";if(prcArr.length&&prcArr[0].Date){var _d=prcArr[0].Date;priceDate=_d.length>=8?_d.slice(4,6)+"/"+_d.slice(6,8):_d.length===7?_d.slice(3,5)+"/"+_d.slice(5,7):"";}
 G.priceDate=priceDate;
 spg(60,"解析上市公司資料...");
@@ -253,8 +257,9 @@ spg(5,"取得自選股資料...");
 var now=new Date(),startDate=(now.getFullYear()-1)+"-01-01";
 var twseRevMap={},twsePrcMap={},tpexInfo={},dmNum2=0,freqYm2={};
 try{
-var r1=await fetch(px(TREV)),r2=await fetch(px(TPRC)),r3=await fetch(px(FINFO));
-var d1=await r1.json(),d2=await r2.json(),d3=await r3.json();
+var r1p=fetch(px(TREV)),r2p=fetchPriceArr(),r3p=fetch(px(FINFO));
+var r1=await r1p,r3=await r3p;
+var d1=await r1.json(),d2=await r2p,d3=await r3.json();
 for(var i=0;i<d1.length;i++){var it=d1[i],keys=Object.keys(it),code=(it[keys[2]]||"").trim();if(!ok4(code))continue;var rev=null,mom=null,yoy=null,cum=null,cumy=null,ind="",nm="",ym="";for(var k=0;k<keys.length;k++){var key=keys[k],val=it[key];if(key.indexOf("當月營收")>=0&&key.indexOf("累計")<0&&key.indexOf("去年")<0){var _wr=pf(val);rev=_wr!=null?_wr/1e5:null;}else if(key.indexOf("上月比較")>=0)mom=pf(val);else if(key.indexOf("去年同月")>=0)yoy=pf(val);else if(key.indexOf("當月累計")>=0){var _wc=pf(val);cum=_wc!=null?_wc/1e5:null;}else if(key.indexOf("前期比較")>=0)cumy=pf(val);else if(key.indexOf("產業別")>=0)ind=(val||"").trim();else if(key.indexOf("公司名稱")>=0)nm=(val||"").trim();else if(key.indexOf("資料年月")>=0)ym=(val||"").trim();}twseRevMap[code]={rev:rev,mom:mom,yoy:yoy,cum:cum,cumy:cumy,ind:ind,name:nm,ymNum:ymNumRoc(ym)};var _yn2=ymNumRoc(ym);if(_yn2)freqYm2[_yn2]=(freqYm2[_yn2]||0)+1;}
 for(var j=0;j<d2.length;j++){var p2=d2[j];if(!ok4(p2.Code))continue;var cl=pf(p2.ClosingPrice),ch=pf(p2.Change),cp2=null;if(cl!=null&&ch!=null&&ch!==0){var pv=cl-ch;if(pv!==0)cp2=parseFloat((ch/Math.abs(pv)*100).toFixed(2));}twsePrcMap[p2.Code]={close:cl,chg:ch,pct:cp2};}
 (d3.data||[]).forEach(function(s){if(ok4(s.stock_id))tpexInfo[s.stock_id]=s;});
@@ -409,7 +414,7 @@ async function refreshPrices(){
 var st=document.getElementById("st"),prevMsg=st.textContent;
 st.textContent="更新股價中...";st.className="st ld";
 try{
-var res=await fetch(px(TPRC)),prcArr=await res.json(),pm={};
+var prcArr=await fetchPriceArr(),pm={};
 for(var i=0;i<prcArr.length;i++){var p2=prcArr[i];if(!ok4(p2.Code))continue;var cl=pf(p2.ClosingPrice),ch=pf(p2.Change),cp=null;if(cl!=null&&ch!=null&&ch!==0){var pv=cl-ch;if(pv!==0)cp=parseFloat((ch/Math.abs(pv)*100).toFixed(2));}pm[p2.Code]={close:cl,chg:ch,pct:cp};}
 for(var j=0;j<G.rows.twse.length;j++){var r=G.rows.twse[j],pr=pm[r.sid];if(pr){r.close=pr.close;r.chg=pr.chg;r.pct=pr.pct;}}
 for(var w=0;w<G.rows.watch.length;w++){var wr=G.rows.watch[w],wpr=pm[wr.sid];if(wpr){wr.close=wpr.close;wr.chg=wpr.chg;wr.pct=wpr.pct;}}
